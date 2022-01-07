@@ -1,4 +1,4 @@
-module sks
+module github.com/facebookincubator/sks
 
 go 1.17
 
