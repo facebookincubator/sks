@@ -89,7 +89,8 @@ OSStatus FetchSEPrivKeyRef(
   CFDictionaryAddValue(query, kSecAttrKeyClass, kSecAttrKeyClassPrivate);
   CFDictionaryAddValue(query, kSecReturnRef, kCFBooleanTrue);
   CFDictionaryAddValue(query, kSecMatchLimit, kSecMatchLimitOne);
-  if (!hash) {
+
+  if (hash) {
     CFDataRef h = CFDataCreateWithBytesNoCopy(
         kCFAllocatorDefault, (UInt8*)hash, 20, kCFAllocatorNull);
     CFDictionaryAddValue(query, kSecAttrApplicationLabel, h);
@@ -257,7 +258,8 @@ OSStatus DeleteKey(const char* label, const char* tag, unsigned char* hash) {
   CFDictionaryAddValue(query, kSecAttrApplicationTag, cfTag);
   CFDictionaryAddValue(query, kSecAttrLabel, cfLabel);
   CFDictionaryAddValue(query, kSecAttrKeyClass, kSecAttrKeyClassPrivate);
-  if (!hash) {
+
+  if (hash) {
     CFDataRef h = CFDataCreateWithBytesNoCopy(
         kCFAllocatorDefault, (UInt8*)hash, 20, kCFAllocatorNull);
     CFDictionaryAddValue(query, kSecAttrApplicationLabel, h);

@@ -50,7 +50,7 @@ func signWithKey(label, tag string, hash, data []byte) ([]byte, error) {
 func findPubKey(label, tag string, hash []byte) ([]byte, error) {
 	res, err := macos.FindPubKey(label, tag, hash)
 	if err != nil {
-		return nil, fmt.Errorf(ErrFindPubKey, label, tag, hash)
+		return nil, fmt.Errorf(ErrFindPubKey, label, tag, err)
 	}
 
 	return res, nil
@@ -64,7 +64,7 @@ func findPubKey(label, tag string, hash []byte) ([]byte, error) {
 func removeKey(label, tag string, hash []byte) (bool, error) {
 	res, err := macos.RemoveKey(label, tag, hash)
 	if err != nil {
-		return false, fmt.Errorf(ErrRemoveKey, label, tag, hash)
+		return false, fmt.Errorf(ErrRemoveKey, label, tag, err)
 	}
 
 	return res, nil

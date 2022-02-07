@@ -160,11 +160,14 @@ func GenKeyPair(label, tag string, useBiometrics, accessibleWhenUnlockedOnly boo
 // hash is the SHA1 of the key. Can be nil
 func SignWithKey(label, tag string, hash, data []byte) ([]byte, error) {
 	cl, ct := C.CString(label), C.CString(tag)
-	ch := C.CBytes(hash)
 	cd := C.CBytes(data)
+	var ch unsafe.Pointer
+	if len(hash) != 0 {
+		ch = C.CBytes(hash)
+		defer C.free(unsafe.Pointer(ch))
+	}
 	clen := C.size_t(len(data))
 	w := C.wrapSignWithKey(cl, ct, ch, cd, clen)
-	C.free(unsafe.Pointer(ch))
 	C.free(unsafe.Pointer(cd))
 	C.free(unsafe.Pointer(cl))
 	C.free(unsafe.Pointer(ct))
@@ -181,9 +184,12 @@ func SignWithKey(label, tag string, hash, data []byte) ([]byte, error) {
 // hash is the SHA1 of the key. Can be nil
 func FindPubKey(label, tag string, hash []byte) ([]byte, error) {
 	cl, ct := C.CString(label), C.CString(tag)
-	ch := C.CBytes(hash)
+	var ch unsafe.Pointer
+	if len(hash) != 0 {
+		ch = C.CBytes(hash)
+		defer C.free(unsafe.Pointer(ch))
+	}
 	w := C.wrapFindPubKey(cl, ct, ch)
-	C.free(unsafe.Pointer(ch))
 	C.free(unsafe.Pointer(cl))
 	C.free(unsafe.Pointer(ct))
 
@@ -202,9 +208,12 @@ func FindPubKey(label, tag string, hash []byte) ([]byte, error) {
 // Returns true if the key was found and deleted successfully
 func RemoveKey(label, tag string, hash []byte) (bool, error) {
 	cl, ct := C.CString(label), C.CString(tag)
-	ch := C.CBytes(hash)
+	var ch unsafe.Pointer
+	if len(hash) != 0 {
+		ch = C.CBytes(hash)
+		defer C.free(unsafe.Pointer(ch))
+	}
 	w := C.wrapDeleteKey(cl, ct, ch)
-	C.free(unsafe.Pointer(ch))
 	C.free(unsafe.Pointer(cl))
 	C.free(unsafe.Pointer(ct))
 
@@ -224,11 +233,14 @@ func RemoveKey(label, tag string, hash []byte) (bool, error) {
 // False otherwise.
 func AccessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
 	cl, ct := C.CString(label), C.CString(tag)
-	ch := C.CBytes(hash)
+	var ch unsafe.Pointer
+	if len(hash) != 0 {
+		ch = C.CBytes(hash)
+		defer C.free(unsafe.Pointer(ch))
+	}
 	w := C.wrapAccessibleWhenUnlockedOnly(cl, ct, ch)
 	C.free(unsafe.Pointer(cl))
 	C.free(unsafe.Pointer(ct))
-	C.free(unsafe.Pointer(ch))
 
 	status, err := unwrapStatus(w)
 	if err != nil {
@@ -244,9 +256,12 @@ func AccessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
 // Returns an error if the key could not be re-labeled.
 func UpdateKeyLabel(label, tag, newLabel string, hash []byte) error {
 	cl, ct, cn := C.CString(label), C.CString(tag), C.CString(newLabel)
-	ch := C.CBytes(hash)
+	var ch unsafe.Pointer
+	if len(hash) != 0 {
+		ch = C.CBytes(hash)
+		defer C.free(unsafe.Pointer(ch))
+	}
 	w := C.wrapUpdateKeyLabel(cl, ct, ch, cn)
-	C.free(unsafe.Pointer(ch))
 	C.free(unsafe.Pointer(cl))
 	C.free(unsafe.Pointer(ct))
 	C.free(unsafe.Pointer(cn))
