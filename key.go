@@ -58,8 +58,8 @@ type regularKey struct {
 
 // NewKey returns a new key backed by SKS given the corresponding label and tag
 // useBiometrics and accessibleWhenUnlockedOnly are not taken into account if the key already exist
-func NewKey(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool) (Key, error) {
-	if pubKey, err := findPubKey(label, tag, nil); err != nil {
+func NewKey(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool, hash []byte) (Key, error) {
+	if pubKey, err := findPubKey(label, tag, hash); err != nil {
 		return nil, err
 	} else if pubKey != nil {
 		return &regularKey{
