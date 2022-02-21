@@ -20,6 +20,7 @@ import (
 	"crypto/elliptic"
 	"crypto/sha1"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -54,6 +55,21 @@ type regularKey struct {
 	pubKey *ecdsa.PublicKey
 	label  string
 	tag    string
+}
+
+// LoadKey returns an existing key backed by SKS given the corresponding label, tag, and hash
+func LoadKey(label, tag string, hash []byte) (Key, error) {
+	if pubKey, err := findPubKey(label, tag, hash); err != nil {
+		return nil, err
+	} else if pubKey != nil {
+		return &regularKey{
+			pubKey: rawToEcdsa(pubKey),
+			label:  label,
+			tag:    tag,
+		}, nil
+	}
+
+	return nil, fmt.Errorf(ErrFindPubKeyNil, label, tag)
 }
 
 // NewKey returns a new key backed by SKS given the corresponding label and tag

@@ -19,6 +19,7 @@ const (
 	ErrGenKeyPair            = "sks: error while generating key pair with label %q and tag %q: %w"
 	ErrSignWithKey           = "sks: error while signing with key with label %q and tag %q: %w"
 	ErrFindPubKey            = "sks: error while trying to find key with label %q and tag %q: %w"
+	ErrFindPubKeyNil         = "sks: nil key returned for key with label %q and tag %q"
 	ErrRemoveKey             = "sks: error while trying to remove key with label %q and tag %q: %w"
 	ErrLabelOrTagUnspecified = "sks: you must specify both a label and a tag"
 	ErrAttributeLookup       = "sks: error while looking up attributes for key with label %q and tag %q: %w"
