@@ -19,7 +19,7 @@ package sks
 import (
 	"fmt"
 
-	"security/sks/linux"
+	"github.com/facebookincubator/sks/linux"
 )
 
 // getCryptoProcessor is a wrapper that returns an initialized

@@ -8,7 +8,6 @@ require (
 	github.com/google/go-tpm v0.3.2
 	github.com/jgoguen/go-utils v0.0.0-20200211015258-b42ad41486fd
 	github.com/peterbourgon/diskv v2.0.1+incompatible
-	security/sks v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -19,5 +18,3 @@ require (
 	github.com/google/logger v1.1.1 // indirect
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
 )
-
-replace security/sks => ../sks

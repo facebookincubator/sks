@@ -19,7 +19,7 @@ package sks
 import (
 	"fmt"
 
-	"security/sks/macos"
+	"github.com/facebookincubator/sks/macos"
 )
 
 // genKeyPair creates a key with the given label and tag potentially

@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-tpm/tpm2"
 	"github.com/google/go-tpm/tpmutil"
 
-	"security/sks/utils"
+	"github.com/facebookincubator/sks/utils"
 )
 
 // This file contains all structs needed for Linux TPM usage

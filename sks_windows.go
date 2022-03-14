@@ -24,7 +24,7 @@ import (
 	"math/big"
 	"strings"
 
-	"security/sks/utils"
+	"github.com/facebookincubator/sks/utils"
 
 	tpm "github.com/aimeemikaelac/certtostore"
 )

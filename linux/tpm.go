@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"os"
 
-	"security/sks/diskio"
-	"security/sks/utils"
+	"github.com/facebookincubator/sks/diskio"
+	"github.com/facebookincubator/sks/utils"
 
 	"github.com/facebookincubator/flog"
 	"github.com/google/go-tpm/tpm2"
