@@ -27,7 +27,7 @@ type ECCPublicKey struct {
 	X, Y *big.Int
 }
 
-// ECCSignature is the bare minumum of ECC signatures needed. The standard ECC
+// ECCSignature is the bare minimum of ECC signatures needed. The standard ECC
 // signature structs available in other tools and libraries include fields we
 // can't include when marshaling.
 type ECCSignature struct {

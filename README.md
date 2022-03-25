@@ -1,4 +1,7 @@
 # Secure Key Store
+
+[![go.dev reference](https://img.shields.io/badge/Dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/facebookincubator/sks)
+
 Secure Key Store (SKS) is a Go library that abstracts the APIs provided by hardware security
 modules present on most modern day user devices such as TPM and Secure Enclave, allowing
 users to leverage their features through a single and simple API.
