@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 // Copyright (c) Facebook, Inc. and its affiliates.
