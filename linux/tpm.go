@@ -28,6 +28,8 @@ import (
 	"github.com/facebookincubator/sks/utils"
 
 	"github.com/facebookincubator/flog"
+	attestUtils "github.com/facebookincubator/sks/attest"
+	"github.com/google/go-attestation/attest"
 	"github.com/google/go-tpm/tpm2"
 	"github.com/google/go-tpm/tpmutil"
 )
@@ -59,6 +61,66 @@ func GetCryptoprocessor(path string) (Cryptoprocessor, error) {
 	}
 
 	return tpm, nil
+}
+
+func (tpm *tpmDevice) GetSecureHardwareVendorData() (*attestUtils.SecureHardwareVendorData, error) {
+	if tpm.rwc == nil {
+		return nil, errors.New("TPM session has been already closed")
+	}
+
+	attestConfig := &attest.OpenConfig{
+		TPMVersion: attest.TPMVersion20,
+		CommandChannel: &attestTPMCommandChannel{
+			tpm.rwc,
+		},
+	}
+
+	attestHandle, err := attest.OpenTPM(attestConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	info, err := attestHandle.Info()
+	if err != nil {
+		return nil, err
+	}
+
+	eks, err := attestHandle.EKs()
+	if err != nil {
+		return nil, err
+	}
+
+	var ekList []attestUtils.EKData
+	for _, ek := range eks {
+		var ekData attestUtils.EKData
+		if ek.Certificate != nil {
+			ekData.IssuerCN = ek.Certificate.Issuer.CommonName
+			ekData.SubjectCN = ek.Certificate.Subject.CommonName
+			ekData.SerialNumber = ek.Certificate.SerialNumber.String()
+			ekData.HasCertInNVRAM = true
+			ekData.HasPublicKeyInNVRam = false
+			ekData.CertDownloadedFromVendorURL = false
+			ekData.SignatureAlgorithm = ek.Certificate.SignatureAlgorithm.String()
+			ekData.PublicKeyAlgorithm = ek.Certificate.PublicKeyAlgorithm.String()
+		} else if ek.Public != nil {
+			// TODO populate values similar to above once we enabled downloading of certificates
+			// from the corresponding vendor's upstream EK fetcher URL
+			ekData.HasCertInNVRAM = false
+			ekData.HasPublicKeyInNVRam = true
+			ekData.CertDownloadedFromVendorURL = false
+			ekData.VendorCertificateURL = ek.CertificateURL
+			ekData.PublicKeyAlgorithm = utils.GetPubKeyType(ek.Public)
+		}
+		ekList = append(ekList, ekData)
+	}
+
+	return &attestUtils.SecureHardwareVendorData{
+		EKs:                    ekList,
+		IsTPM20CompliantDevice: true,
+		VendorName:             info.Manufacturer.String(),
+		VendorInfo:             info.VendorInfo,
+		Version:                uint8(info.Version),
+	}, nil
 }
 
 func (tpm *tpmDevice) Initialize() error {

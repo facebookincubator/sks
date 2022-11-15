@@ -16,7 +16,13 @@
 
 package utils
 
-import "math/big"
+import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/rsa"
+	"crypto/x509"
+	"math/big"
+)
 
 // This file contains utility functions and structs for dealing with
 // cryptographic operations.
@@ -32,4 +38,19 @@ type ECCPublicKey struct {
 // can't include when marshaling.
 type ECCSignature struct {
 	R, S *big.Int
+}
+
+// GetPubKeyType does a type-assertaion on the supplied crypto public key
+// and returns it's x509.PublicKeyAlgorithm in string format
+func GetPubKeyType(key crypto.PublicKey) string {
+	switch key.(type) {
+	case rsa.PublicKey:
+		return x509.RSA.String()
+	case ecdsa.PublicKey:
+		return x509.ECDSA.String()
+	default:
+		// it's very unlikely for the TPM vendor any type other than the above.
+		// TODO if we for some reason encounter this, we can extend this to cover more key types
+		return x509.UnknownPublicKeyAlgorithm.String()
+	}
 }

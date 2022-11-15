@@ -19,6 +19,7 @@ package sks
 import (
 	"fmt"
 
+	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/linux"
 )
 
@@ -114,4 +115,14 @@ func accessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
 
 func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
 	return fmt.Errorf(ErrNotImplemented, "updateKeyLabel")
+}
+
+func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
+	tpm, err := getCryptoProcessor()
+	if err != nil {
+		return nil, fmt.Errorf(ErrGetSecureHardwareVendorData, err)
+	}
+	defer tpm.Close()
+
+	return tpm.GetSecureHardwareVendorData()
 }

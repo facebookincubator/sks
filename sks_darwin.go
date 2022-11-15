@@ -19,6 +19,7 @@ package sks
 import (
 	"fmt"
 
+	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/macos"
 )
 
@@ -95,4 +96,8 @@ func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
 	}
 
 	return nil
+}
+
+func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
+	return nil, fmt.Errorf(ErrNotImplemented, "getSecureHardwareVendorData")
 }

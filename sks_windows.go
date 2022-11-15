@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/utils"
 
 	tpm "github.com/aimeemikaelac/certtostore"
@@ -150,4 +151,8 @@ func accessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
 
 func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
 	return fmt.Errorf(ErrNotImplemented, "updateKeyLabel")
+}
+
+func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
+	return nil, fmt.Errorf(ErrNotImplemented, "getSecureHardwareVendorData")
 }

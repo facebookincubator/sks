@@ -18,11 +18,11 @@
 package linux
 
 import (
-	"io"
-
 	"github.com/google/go-tpm/tpm2"
 	"github.com/google/go-tpm/tpmutil"
+	"io"
 
+	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/utils"
 )
 
@@ -46,6 +46,10 @@ type Cryptoprocessor interface {
 	// GenKeyPair generates a key pair given a label and a tag. The public key
 	// is returned as X and Y in ASN.1 DER format.
 	GenKeyPair(keyID string) ([]byte, error)
+
+	// GetSecureHardwareVendorData gets vendor specific information from the secure
+	// hardware implementation available for a given device
+	GetSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error)
 
 	// FindPubKey looks for a key with the specified label and tag and return
 	// the public key, as X and Y in ASN.1 DER format.
@@ -205,4 +209,10 @@ type tpmKey struct {
 
 	// Parent is the parent key of this key. This is unset for a primary key.
 	Parent tpmutil.Handle
+}
+
+// attestTPMCommandChannel is the opaque struct interfacing the attest.CommandChannelTPM20
+// and provides the underlying tpmDevice handle as the readWriteCloser.
+type attestTPMCommandChannel struct {
+	io.ReadWriteCloser
 }
