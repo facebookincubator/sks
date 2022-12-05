@@ -28,6 +28,7 @@ import (
 	"github.com/facebookincubator/sks/utils"
 
 	tpm "github.com/aimeemikaelac/certtostore"
+	"github.com/google/go-attestation/attest"
 )
 
 const (
@@ -154,5 +155,51 @@ func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
 }
 
 func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
-	return nil, fmt.Errorf(ErrNotImplemented, "getSecureHardwareVendorData")
+	attestTPMHandle, err := attest.OpenTPM(nil)
+	if err != nil {
+		return nil, err
+	}
+	defer attestTPMHandle.Close()
+
+	info, err := attestTPMHandle.Info()
+	if err != nil {
+		return nil, err
+	}
+
+	eks, err := attestTPMHandle.EKs()
+	if err != nil {
+		return nil, err
+	}
+
+	var ekList []utils.EKData
+	for _, ek := range eks {
+		var ekData utils.EKData
+		if ek.Certificate != nil {
+			ekData.IssuerCN = ek.Certificate.Issuer.CommonName
+			ekData.SubjectCN = ek.Certificate.Subject.CommonName
+			ekData.SerialNumber = ek.Certificate.SerialNumber.String()
+			ekData.HasCertInNVRAM = true
+			ekData.HasPublicKeyInNVRam = false
+			ekData.CertDownloadedFromVendorURL = false
+			ekData.SignatureAlgorithm = ek.Certificate.SignatureAlgorithm.String()
+			ekData.PublicKeyAlgorithm = ek.Certificate.PublicKeyAlgorithm.String()
+		} else if ek.Public != nil {
+			// TODO populate values similar to above once we enabled downloading of certificates
+			// from the corresponding vendor's upstream EK fetcher URL
+			ekData.HasCertInNVRAM = false
+			ekData.HasPublicKeyInNVRam = true
+			ekData.CertDownloadedFromVendorURL = false
+			ekData.VendorCertificateURL = ek.CertificateURL
+			ekData.PublicKeyAlgorithm = utils.GetPubKeyType(ek.Public)
+		}
+		ekList = append(ekList, ekData)
+	}
+
+	return &utils.SecureHardwareVendorData{
+		EKs:                    ekList,
+		IsTPM20CompliantDevice: true,
+		VendorName:             info.Manufacturer.String(),
+		VendorInfo:             info.VendorInfo,
+		Version:                uint8(info.Version),
+	}, nil
 }
