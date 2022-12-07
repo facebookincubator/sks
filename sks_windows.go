@@ -28,7 +28,7 @@ import (
 	"github.com/facebookincubator/sks/utils"
 
 	tpm "github.com/aimeemikaelac/certtostore"
-	"github.com/google/go-attestation/attest"
+	goattest "github.com/google/go-attestation/attest"
 )
 
 const (
@@ -155,7 +155,7 @@ func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
 }
 
 func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
-	attestTPMHandle, err := attest.OpenTPM(nil)
+	attestTPMHandle, err := goattest.OpenTPM(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -171,9 +171,9 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 		return nil, err
 	}
 
-	var ekList []utils.EKData
+	var ekList []attest.EKData
 	for _, ek := range eks {
-		var ekData utils.EKData
+		var ekData attest.EKData
 		if ek.Certificate != nil {
 			ekData.IssuerCN = ek.Certificate.Issuer.CommonName
 			ekData.SubjectCN = ek.Certificate.Subject.CommonName
@@ -195,7 +195,7 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 		ekList = append(ekList, ekData)
 	}
 
-	return &utils.SecureHardwareVendorData{
+	return &attest.SecureHardwareVendorData{
 		EKs:                    ekList,
 		IsTPM20CompliantDevice: true,
 		VendorName:             info.Manufacturer.String(),
