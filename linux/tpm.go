@@ -35,12 +35,9 @@ import (
 )
 
 // GetCryptoprocessor handles the logic of determining whether to use a physical
-// TPM or an on-disk implementation. Set `path` to the absolute path of the TPM
-// device to interface with. Unless you have a good reason, this should be set
+// TPM, on-disk implementation, or software implementation. Set `path` to the absolute path of the TPM
+// device or the unix socket to interface with. Unless you have a good reason, this should be set
 // to `/dev/tpmrm0`.
-// TODO: Only physical TPM is currently supported, support not having one. Once
-// support is added, use the existence/mode of `path` to decide whether to use
-// a physical TPM or an on-disk implementation
 func GetCryptoprocessor(path string) (Cryptoprocessor, error) {
 	// Check if the TPM path exists
 	info, err := os.Stat(path)
@@ -49,7 +46,7 @@ func GetCryptoprocessor(path string) (Cryptoprocessor, error) {
 	}
 
 	var tpm Cryptoprocessor
-	if (os.ModeDevice|os.ModeCharDevice)&info.Mode() != 0 {
+	if (os.ModeDevice|os.ModeCharDevice|os.ModeSocket)&info.Mode() != 0 {
 		tpm = &tpmDevice{
 			path: path,
 		}
