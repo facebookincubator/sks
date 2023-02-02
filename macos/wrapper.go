@@ -133,29 +133,6 @@ func unwrapStatus(w *C.Wrapper) (res int, err error) {
 	return
 }
 
-// GenKeyPair creates a key with the given label and tag potentially
-// needing biometric authentication. Returns public key raw data.
-func GenKeyPair(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool) ([]byte, error) {
-	cl, ct := C.CString(label), C.CString(tag)
-	cb, cu := C.int(0), C.int(0)
-	if useBiometrics {
-		cb = C.int(1)
-	}
-	if accessibleWhenUnlockedOnly {
-		cu = C.int(1)
-	}
-
-	w := C.wrapGenKey(cl, ct, cb, cu)
-	C.free(unsafe.Pointer(cl))
-	C.free(unsafe.Pointer(ct))
-	res, err := unwrap(w)
-	if err != nil {
-		return res, err
-	}
-
-	return res, nil
-}
-
 // SignWithKey signs arbitrary data pointed to by data with the key described by
 // label and tag. Returns the signed data.
 // hash is the SHA1 of the key. Can be nil
