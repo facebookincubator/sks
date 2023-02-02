@@ -138,6 +138,35 @@ func FindPubKey(label, tag string, hash []byte) ([]byte, error) {
 	return nil, err
 }
 
+// SignWithKey signs arbitrary data pointed to by data with the key described by
+// label and tag. Returns the signed data.
+// hash is the SHA1 of the key. Can be nil.
+func SignWithKey(label, tag string, hash, digest []byte) ([]byte, error) {
+	key, err := fetchSEPrivKey(label, tag, hash)
+	if err != nil {
+		return nil, err
+	}
+	defer C.CFRelease(C.CFTypeRef(key))
+
+	cfDigest, err := newCFData(digest)
+	if err != nil {
+		return nil, err
+	}
+	defer C.CFRelease(C.CFTypeRef(cfDigest))
+
+	var eref C.CFErrorRef
+	signature := C.SecKeyCreateSignature(key, C.kSecKeyAlgorithmECDSASignatureDigestX962, cfDigest, &eref)
+	if err := goError(eref); err != nil {
+		return nil, err
+	}
+	defer C.CFRelease(C.CFTypeRef(signature))
+
+	return C.GoBytes(
+		unsafe.Pointer(C.CFDataGetBytePtr(signature)),
+		C.int(C.CFDataGetLength(signature)),
+	), nil
+}
+
 func fetchSEPrivKey(label, tag string, hash []byte) (C.SecKeyRef, error) {
 	cfTag, err := newCFData([]byte(tag))
 	if err != nil {

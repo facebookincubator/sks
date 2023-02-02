@@ -133,31 +133,6 @@ func unwrapStatus(w *C.Wrapper) (res int, err error) {
 	return
 }
 
-// SignWithKey signs arbitrary data pointed to by data with the key described by
-// label and tag. Returns the signed data.
-// hash is the SHA1 of the key. Can be nil
-func SignWithKey(label, tag string, hash, data []byte) ([]byte, error) {
-	cl, ct := C.CString(label), C.CString(tag)
-	cd := C.CBytes(data)
-	var ch unsafe.Pointer
-	if len(hash) != 0 {
-		ch = C.CBytes(hash)
-		defer C.free(unsafe.Pointer(ch))
-	}
-	clen := C.size_t(len(data))
-	w := C.wrapSignWithKey(cl, ct, ch, cd, clen)
-	C.free(unsafe.Pointer(cd))
-	C.free(unsafe.Pointer(cl))
-	C.free(unsafe.Pointer(ct))
-
-	res, err := unwrap(w)
-	if err != nil {
-		return res, err
-	}
-
-	return res, nil
-}
-
 // RemoveKey tries to delete a key identified by label, tag and hash.
 // hash is the SHA1 of the key. Can be nil
 // If hash is nil then all the keys that match the label and tag specified will
