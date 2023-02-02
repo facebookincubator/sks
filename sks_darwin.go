@@ -91,11 +91,7 @@ func accessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
 // hash is the SHA1 of the key. Can be nil
 // Returns an error if the key could not be re-labeled.
 func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
-	if err := macos.UpdateKeyLabel(label, tag, newLabel, hash); err != nil {
-		return fmt.Errorf(ErrUpdateKeyAttr, label, tag, err)
-	}
-
-	return nil
+	return fmt.Errorf(ErrNotImplemented, "updateKeyLabel")
 }
 
 func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {

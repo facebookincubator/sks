@@ -20,21 +20,6 @@ limitations under the License.
 
 #include "macos.h"
 
-static CFTypeRef kSecAccessControlKeyProtection = CFSTR("prot");
-
-// Struct to extract key protection level
-// from SecAccessControlRef
-struct __SecAccessControl {
-  CFRuntimeBase _base;
-  CFMutableDictionaryRef dict;
-};
-
-// Get the protection level from an access control object reference
-CFTypeRef SecAccessControlGetProtection(SecAccessControlRef access_control) {
-  return CFDictionaryGetValue(
-      access_control->dict, kSecAccessControlKeyProtection);
-}
-
 // Turn a regular C string to CFDataRef
 // We always assume UTF8 encoding.
 CFDataRef StringToDataRef(const char* str) {
@@ -271,66 +256,6 @@ OSStatus DeleteKey(const char* label, const char* tag, unsigned char* hash) {
   } while (res == errSecDuplicateItem);
 
   return res;
-}
-
-// Returns the protection level for a key, identified by tag, label and,
-// potentially, a hash. The hash is the SHA1 hash of the key. Can be NULL.
-CFTypeRef HasSEKeyProtection(
-    const char* label,
-    const char* tag,
-    unsigned char* hash,
-    CFStringRef value,
-    CFStringRef* errorStr) {
-  CFDataRef cfTag = StringToDataRef(tag);
-  CFStringRef cfLabel = CFStringCreateWithCString(
-      kCFAllocatorDefault, label, kCFStringEncodingUTF8);
-
-  // Generate a query to return key attributes rather than key data.
-  CFMutableDictionaryRef query = CFDictionaryCreateMutable(
-      kCFAllocatorDefault,
-      0,
-      &kCFTypeDictionaryKeyCallBacks,
-      &kCFTypeDictionaryValueCallBacks);
-  CFDictionaryAddValue(query, kSecClass, kSecClassKey);
-  CFDictionaryAddValue(query, kSecAttrApplicationTag, cfTag);
-  CFDictionaryAddValue(query, kSecAttrLabel, cfLabel);
-  CFDictionarySetValue(query, kSecReturnAttributes, kCFBooleanTrue);
-  CFDictionaryAddValue(query, kSecMatchLimit, kSecMatchLimitOne);
-  if (hash) {
-    CFDataRef h = CFDataCreateWithBytesNoCopy(
-        kCFAllocatorDefault, (UInt8*)hash, 20, kCFAllocatorNull);
-    CFDictionaryAddValue(query, kSecAttrApplicationLabel, h);
-  }
-
-  CFTypeRef res = NULL;
-  OSStatus status = SecItemCopyMatching((CFDictionaryRef)query, &res);
-  CFRelease((CFTypeRef)query);
-  CFRelease((CFTypeRef)cfTag);
-  CFRelease((CFTypeRef)cfLabel);
-  if (!res)
-    status = errSecBadReq;
-  if (status != errSecSuccess) {
-    *errorStr = SecCopyErrorMessageString(status, NULL);
-    return NULL;
-  }
-
-  SecAccessControlRef ac =
-      (SecAccessControlRef)CFDictionaryGetValue(res, kSecAttrAccessControl);
-
-  if (!ac) {
-    *errorStr = SecCopyErrorMessageString(errSecNoSuchAttr, NULL);
-    return NULL;
-  }
-
-  CFTypeRef protection = SecAccessControlGetProtection(ac);
-  if (!protection) {
-    *errorStr = SecCopyErrorMessageString(errSecDataNotAvailable, NULL);
-    return NULL;
-  }
-
-  CFRelease((CFTypeRef)ac);
-
-  return protection;
 }
 
 OSStatus UpdateKeyLabel(

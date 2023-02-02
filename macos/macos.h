@@ -27,14 +27,6 @@ limitations under the License.
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
 
-typedef struct __CFRuntimeBase {
-  uintptr_t _cfisa;
-  uint8_t _cfinfo[4];
-#if __LP64__
-  uint32_t _rc;
-#endif
-} CFRuntimeBase;
-
 /* Exported functions */
 OSStatus FetchSEKey(const char*, const char*, unsigned char*, CFDataRef*);
 CFBooleanRef CreateSEKey(

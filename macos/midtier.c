@@ -182,37 +182,6 @@ int deleteKey(
   return 1;
 }
 
-// accessibleWhenUnlockedOnly checks the protection attribute for a key
-// specified by label and tag.
-// The hash is the SHA1 hash for the key and key be NULL.
-// Returns 0 if an error occured or no key protection attribute is found.
-// It returns 1 if the key is only accessible when the device is unlocked.
-// 0 otherwise.
-int accessibleWhenUnlockedOnly(
-    const char* label,
-    const char* tag,
-    unsigned char* hash,
-    char** error) {
-  CFStringRef errStr = NULL;
-  CFTypeRef protection = HasSEKeyProtection(
-      label, tag, hash, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, &errStr);
-
-  if (errStr || !protection) {
-    if (!errStr) {
-      errStr = CFSTR("error determining key protection level");
-    }
-    *error = CFStringToCString(errStr);
-    CFRelease((CFTypeRef)errStr);
-    return 0;
-  }
-
-  if (CFEqual(protection, kSecAttrAccessibleWhenUnlockedThisDeviceOnly)) {
-    return 1;
-  }
-
-  return 0;
-}
-
 // updateKeyLabel changes the key's label to a new one.
 int updateKeyLabel(
     const char* label,

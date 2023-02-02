@@ -22,6 +22,26 @@ package macos
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
+
+typedef struct __CFRuntimeBase {
+  uintptr_t _cfisa;
+  uint8_t _cfinfo[4];
+#if __LP64__
+  uint32_t _rc;
+#endif
+} CFRuntimeBase;
+
+static CFTypeRef kSecAccessControlKeyProtection = CFSTR("prot");
+
+struct __SecAccessControl {
+  CFRuntimeBase _base;
+  CFMutableDictionaryRef dict;
+};
+
+CFTypeRef SecAccessControlGetProtection(SecAccessControlRef access_control) {
+  return CFDictionaryGetValue(
+      access_control->dict, kSecAccessControlKeyProtection);
+}
 */
 import "C"
 import (
@@ -31,11 +51,13 @@ import (
 )
 
 const (
-	nilSecKey       C.SecKeyRef       = 0
-	nilCFData       C.CFDataRef       = 0
-	nilCFString     C.CFStringRef     = 0
-	nilCFDictionary C.CFDictionaryRef = 0
-	nilCFError      C.CFErrorRef      = 0
+	nilSecKey           C.SecKeyRef           = 0
+	nilCFData           C.CFDataRef           = 0
+	nilCFString         C.CFStringRef         = 0
+	nilCFDictionary     C.CFDictionaryRef     = 0
+	nilCFError          C.CFErrorRef          = 0
+	nilCFType           C.CFTypeRef           = 0
+	nilSecAccessControl C.SecAccessControlRef = 0
 )
 
 // GenKeyPair creates a key with the given label and tag.
@@ -216,6 +238,76 @@ func RemoveKey(label, tag string, hash []byte) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// AccessibleWhenUnlockedOnly checks whether or not the protection level for
+// a key (identified by label, tag, and hash) is set to only accessible
+// when the device is unlocked.
+// hash is the SHA1 of the key. Can be nil
+// Returns true if protection is set to accessible when unlocked only.
+// False otherwise.
+func AccessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
+	cfTag, err := newCFData([]byte(tag))
+	if err != nil {
+		return false, err
+	}
+	defer C.CFRelease(C.CFTypeRef(cfTag))
+
+	cfLabel, err := newCFString(label)
+	if err != nil {
+		return false, err
+	}
+	defer C.CFRelease(C.CFTypeRef(cfLabel))
+
+	m := map[C.CFTypeRef]C.CFTypeRef{
+		C.CFTypeRef(C.kSecClass):              C.CFTypeRef(C.kSecClassKey),
+		C.CFTypeRef(C.kSecAttrApplicationTag): C.CFTypeRef(cfTag),
+		C.CFTypeRef(C.kSecAttrLabel):          C.CFTypeRef(cfLabel),
+		C.CFTypeRef(C.kSecReturnAttributes):   C.CFTypeRef(C.kCFBooleanTrue),
+		C.CFTypeRef(C.kSecMatchLimit):         C.CFTypeRef(C.kSecMatchLimitOne),
+	}
+
+	if hash != nil {
+		d, err := newCFData(hash)
+		if err != nil {
+			return false, nil
+		}
+		defer C.CFRelease(C.CFTypeRef(d))
+
+		m[C.CFTypeRef(C.kSecAttrApplicationLabel)] = C.CFTypeRef(d)
+	}
+	query, err := newCFDictionary(m)
+	if err != nil {
+		return false, err
+	}
+	defer C.CFRelease(C.CFTypeRef(query))
+
+	var res C.CFTypeRef
+	st := C.SecItemCopyMatching(query, &res)
+	if err := goError(st); err != nil {
+		return false, err
+	}
+	if res == nilCFType {
+		return false, fmt.Errorf("cannot extract key attributes")
+	}
+	defer C.CFRelease(C.CFTypeRef(res))
+
+	access := C.SecAccessControlRef(C.CFDictionaryGetValue(C.CFDictionaryRef(res), unsafe.Pointer(C.kSecAttrAccessControl)))
+	if access == nilSecAccessControl {
+		return false, fmt.Errorf("cannot extract key access control")
+	}
+	defer C.CFRelease(C.CFTypeRef(access))
+
+	protection := C.SecAccessControlGetProtection(access)
+	if protection == nilCFType {
+		return false, fmt.Errorf("cannot extract key protection")
+	}
+	defer C.CFRelease(C.CFTypeRef(protection))
+
+	if C.CFEqual(protection, C.CFTypeRef(C.kSecAttrAccessibleWhenUnlockedThisDeviceOnly)) == 1 {
+		return true, nil
+	}
+	return false, nil
 }
 
 func fetchSEPrivKey(label, tag string, hash []byte) (C.SecKeyRef, error) {

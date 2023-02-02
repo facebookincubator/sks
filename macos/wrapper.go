@@ -81,15 +81,6 @@ Wrapper *wrapUpdateKeyLabel(const char *label, const char *tag, void *hash, cons
 	return res;
 }
 
-Wrapper *wrapAccessibleWhenUnlockedOnly(const char *label, const char *tag, void *hash) {
-	Wrapper *res = (Wrapper *)malloc(sizeof(Wrapper));
-	if (!res)
-		return NULL;
-	memset(res, 0, sizeof(Wrapper));
-	res->status = accessibleWhenUnlockedOnly(label, tag, (unsigned char *)hash, &res->error);
-
-	return res;
-}
 */
 import "C"
 
@@ -131,31 +122,6 @@ func unwrapStatus(w *C.Wrapper) (res int, err error) {
 	}
 	res = int(w.status)
 	return
-}
-
-// AccessibleWhenUnlockedOnly checks whether or not the protection level for
-// a key (identified by label, tag, and hash) is set to only accessible
-// when the device is unlocked.
-// hash is the SHA1 of the key. Can be nil
-// Returns true if protection is set to accessible when unlocked only.
-// False otherwise.
-func AccessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
-	cl, ct := C.CString(label), C.CString(tag)
-	var ch unsafe.Pointer
-	if len(hash) != 0 {
-		ch = C.CBytes(hash)
-		defer C.free(unsafe.Pointer(ch))
-	}
-	w := C.wrapAccessibleWhenUnlockedOnly(cl, ct, ch)
-	C.free(unsafe.Pointer(cl))
-	C.free(unsafe.Pointer(ct))
-
-	status, err := unwrapStatus(w)
-	if err != nil {
-		return false, err
-	}
-
-	return status != 0, nil
 }
 
 // UpdateKeyLabel tries to update a key identified by label, tag and hash

@@ -33,11 +33,6 @@ size_t signWithKey(
 size_t
 findPubKey(const char*, const char*, unsigned char*, unsigned char**, char**);
 int deleteKey(const char*, const char*, unsigned char*, char**);
-int accessibleWhenUnlockedOnly(
-    const char*,
-    const char*,
-    unsigned char*,
-    char**);
 int updateKeyLabel(
     const char*,
     const char*,
