@@ -25,6 +25,7 @@ package macos
 */
 import "C"
 import (
+	"errors"
 	"fmt"
 	"unsafe"
 )
@@ -119,6 +120,91 @@ func GenKeyPair(label, tag string, useBiometrics, accessibleWhenUnlockedOnly boo
 	), nil
 }
 
+// FindPubKey returns the raw public key described by label and tag
+// hash is the SHA1 of the key. Can be nil.
+func FindPubKey(label, tag string, hash []byte) ([]byte, error) {
+	key, err := fetchSEPrivKey(label, tag, hash)
+	if err == nil {
+		defer C.CFRelease(C.CFTypeRef(key))
+		return extractPubKey(key)
+	}
+
+	var oserr osStatusError
+	if errors.As(err, &oserr) {
+		if oserr.code == C.errSecItemNotFound {
+			return nil, nil
+		}
+	}
+	return nil, err
+}
+
+func fetchSEPrivKey(label, tag string, hash []byte) (C.SecKeyRef, error) {
+	cfTag, err := newCFData([]byte(tag))
+	if err != nil {
+		return nilSecKey, err
+	}
+	defer C.CFRelease(C.CFTypeRef(cfTag))
+
+	cfLabel, err := newCFString(label)
+	if err != nil {
+		return nilSecKey, err
+	}
+	defer C.CFRelease(C.CFTypeRef(cfLabel))
+
+	m := map[C.CFTypeRef]C.CFTypeRef{
+		C.CFTypeRef(C.kSecClass):              C.CFTypeRef(C.kSecClassKey),
+		C.CFTypeRef(C.kSecAttrKeyType):        C.CFTypeRef(C.kSecAttrKeyTypeEC),
+		C.CFTypeRef(C.kSecAttrApplicationTag): C.CFTypeRef(cfTag),
+		C.CFTypeRef(C.kSecAttrLabel):          C.CFTypeRef(cfLabel),
+		C.CFTypeRef(C.kSecAttrKeyClass):       C.CFTypeRef(C.kSecAttrKeyClassPrivate),
+		C.CFTypeRef(C.kSecReturnRef):          C.CFTypeRef(C.kCFBooleanTrue),
+		C.CFTypeRef(C.kSecMatchLimit):         C.CFTypeRef(C.kSecMatchLimitOne),
+	}
+
+	if hash != nil {
+		d, err := newCFData(hash)
+		if err != nil {
+			return nilSecKey, err
+		}
+		defer C.CFRelease(C.CFTypeRef(d))
+
+		m[C.CFTypeRef(C.kSecAttrApplicationLabel)] = C.CFTypeRef(d)
+	}
+
+	query, err := newCFDictionary(m)
+	if err != nil {
+		return nilSecKey, err
+	}
+	defer C.CFRelease(C.CFTypeRef(query))
+
+	var key C.CFTypeRef
+	status := C.SecItemCopyMatching(query, &key)
+	if err := goError(status); err != nil {
+		return nilSecKey, err
+	}
+
+	return C.SecKeyRef(key), nil
+}
+
+func extractPubKey(key C.SecKeyRef) ([]byte, error) {
+	publicKey := C.SecKeyCopyPublicKey(key)
+	defer C.CFRelease(C.CFTypeRef(publicKey))
+
+	keyAttrs := C.SecKeyCopyAttributes(publicKey)
+	defer C.CFRelease(C.CFTypeRef(keyAttrs))
+
+	val := C.CFDataRef(C.CFDictionaryGetValue(keyAttrs, unsafe.Pointer(C.kSecValueData)))
+	if val == nilCFData {
+		return nil, fmt.Errorf("cannot extract public key")
+	}
+	defer C.CFRelease(C.CFTypeRef(val))
+
+	return C.GoBytes(
+		unsafe.Pointer(C.CFDataGetBytePtr(val)),
+		C.int(C.CFDataGetLength(val)),
+	), nil
+}
+
 func newCFData(d []byte) (C.CFDataRef, error) {
 	p := (*C.uchar)(C.CBytes(d))
 	defer C.free(unsafe.Pointer(p))
@@ -169,7 +255,7 @@ func goError(e interface{}) error {
 		if v == 0 {
 			return nil
 		}
-		return fmt.Errorf("OSStatus %d", v)
+		return osStatusError{code: int(v)}
 
 	case C.CFErrorRef:
 		if v == nilCFError {
@@ -191,4 +277,12 @@ func goError(e interface{}) error {
 	}
 
 	return fmt.Errorf("unknown error type %T", e)
+}
+
+type osStatusError struct {
+	code int
+}
+
+func (oserr osStatusError) Error() string {
+	return fmt.Sprintf("OSStatus %d", oserr.code)
 }

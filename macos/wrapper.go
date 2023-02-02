@@ -158,27 +158,6 @@ func SignWithKey(label, tag string, hash, data []byte) ([]byte, error) {
 	return res, nil
 }
 
-// FindPubKey returns the raw public key described by label and tag
-// hash is the SHA1 of the key. Can be nil
-func FindPubKey(label, tag string, hash []byte) ([]byte, error) {
-	cl, ct := C.CString(label), C.CString(tag)
-	var ch unsafe.Pointer
-	if len(hash) != 0 {
-		ch = C.CBytes(hash)
-		defer C.free(unsafe.Pointer(ch))
-	}
-	w := C.wrapFindPubKey(cl, ct, ch)
-	C.free(unsafe.Pointer(cl))
-	C.free(unsafe.Pointer(ct))
-
-	res, err := unwrap(w)
-	if err != nil {
-		return res, err
-	}
-
-	return res, nil
-}
-
 // RemoveKey tries to delete a key identified by label, tag and hash.
 // hash is the SHA1 of the key. Can be nil
 // If hash is nil then all the keys that match the label and tag specified will
