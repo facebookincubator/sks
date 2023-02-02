@@ -133,30 +133,6 @@ func unwrapStatus(w *C.Wrapper) (res int, err error) {
 	return
 }
 
-// RemoveKey tries to delete a key identified by label, tag and hash.
-// hash is the SHA1 of the key. Can be nil
-// If hash is nil then all the keys that match the label and tag specified will
-// be deleted.
-// Returns true if the key was found and deleted successfully
-func RemoveKey(label, tag string, hash []byte) (bool, error) {
-	cl, ct := C.CString(label), C.CString(tag)
-	var ch unsafe.Pointer
-	if len(hash) != 0 {
-		ch = C.CBytes(hash)
-		defer C.free(unsafe.Pointer(ch))
-	}
-	w := C.wrapDeleteKey(cl, ct, ch)
-	C.free(unsafe.Pointer(cl))
-	C.free(unsafe.Pointer(ct))
-
-	_, err := unwrap(w)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
 // AccessibleWhenUnlockedOnly checks whether or not the protection level for
 // a key (identified by label, tag, and hash) is set to only accessible
 // when the device is unlocked.

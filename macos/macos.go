@@ -167,6 +167,57 @@ func SignWithKey(label, tag string, hash, digest []byte) ([]byte, error) {
 	), nil
 }
 
+// RemoveKey tries to delete a key identified by label, tag and hash.
+// hash is the SHA1 of the key. Can be nil
+// If hash is nil then all the keys that match the label and tag specified will
+// be deleted.
+// Returns true if the key was found and deleted successfully
+func RemoveKey(label, tag string, hash []byte) (bool, error) {
+	cfTag, err := newCFData([]byte(tag))
+	if err != nil {
+		return false, err
+	}
+	defer C.CFRelease(C.CFTypeRef(cfTag))
+
+	cfLabel, err := newCFString(label)
+	if err != nil {
+		return false, err
+	}
+	defer C.CFRelease(C.CFTypeRef(cfLabel))
+
+	m := map[C.CFTypeRef]C.CFTypeRef{
+		C.CFTypeRef(C.kSecClass):              C.CFTypeRef(C.kSecClassKey),
+		C.CFTypeRef(C.kSecAttrKeyType):        C.CFTypeRef(C.kSecAttrKeyTypeEC),
+		C.CFTypeRef(C.kSecAttrApplicationTag): C.CFTypeRef(cfTag),
+		C.CFTypeRef(C.kSecAttrLabel):          C.CFTypeRef(cfLabel),
+		C.CFTypeRef(C.kSecAttrKeyClass):       C.CFTypeRef(C.kSecAttrKeyClassPrivate),
+	}
+
+	if hash != nil {
+		d, err := newCFData(hash)
+		if err != nil {
+			return false, nil
+		}
+		defer C.CFRelease(C.CFTypeRef(d))
+
+		m[C.CFTypeRef(C.kSecAttrApplicationLabel)] = C.CFTypeRef(d)
+	}
+	query, err := newCFDictionary(m)
+	if err != nil {
+		return false, err
+	}
+	defer C.CFRelease(C.CFTypeRef(query))
+
+	var st C.OSStatus = C.errSecDuplicateItem
+	for st == C.errSecDuplicateItem {
+		st = C.SecItemDelete(query)
+	}
+	if err := goError(st); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func fetchSEPrivKey(label, tag string, hash []byte) (C.SecKeyRef, error) {
 	cfTag, err := newCFData([]byte(tag))
 	if err != nil {
