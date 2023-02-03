@@ -19,15 +19,15 @@ package sks
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"encoding/asn1"
 	"fmt"
-	"math/big"
 	"strings"
+
+	"golang.org/x/sys/windows"
 
 	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/utils"
 
-	tpm "github.com/aimeemikaelac/certtostore"
+	tpm "github.com/google/certtostore"
 	goattest "github.com/google/go-attestation/attest"
 )
 
@@ -44,16 +44,20 @@ const (
 // Returns public key raw data.
 // tag, useBiometrics, and accessibleWhenUnlockedOnly are ignored
 func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
-	certStore, err := tpm.OpenWinCertStore(
+	certStore, err := tpm.OpenWinCertStoreCurrentUser(
 		keyStorageProvider,
 		label,
 		[]string{},
 		[]string{},
+		false,
 	)
 	if err != nil {
 		return nil, fmt.Errorf(ErrGenKeyPair, label, tag, err)
 	}
-	key, err := certStore.Generate(256, "ECDSA_P256")
+	key, err := certStore.Generate(tpm.GenerateOpts{
+		Algorithm: tpm.EC,
+		Size:      256,
+	})
 	if err != nil {
 		return nil, fmt.Errorf(ErrGenKeyPair, label, tag, err)
 	}
@@ -65,29 +69,14 @@ func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
 // label and tag. Returns the signed data.
 // tag and key hash are not used.
 func signWithKey(label, tag string, _, digest []byte) ([]byte, error) {
-	key, err := findPrivateKey(label)
+	cred, err := findPrivateKey(label)
 	if err != nil {
 		return nil, fmt.Errorf(ErrSignWithKey, label, tag, err)
 	}
-	if key == nil {
+	if cred == nil {
 		return nil, fmt.Errorf("failed to find key with label %q and tag %q", label, tag)
 	}
-	key = key.(*tpm.EcdsaKey)
-	sig, err := key.SignRaw(digest)
-	if err != nil {
-		return nil, fmt.Errorf(ErrSignWithKey, label, tag, err)
-	}
-	// https://stackoverflow.com/questions/38702169/c-sharp-ecdsacng-signdata-use-signature-in-openssl
-	// windows encodes an ecdsa signature as concatenating r and s in the array.
-	// the output sig will always be of even length
-	r := new(big.Int).SetBytes(sig[0 : len(sig)/2])
-	s := new(big.Int).SetBytes(sig[len(sig)/2:])
-	// https://golang.org/src/crypto/ecdsa/ecdsa.go?s=2196:2295#L65
-	sig, err = asn1.Marshal(utils.ECCSignature{r, s})
-	if err != nil {
-		return nil, fmt.Errorf(ErrSignWithKey, label, tag, err)
-	}
-	return sig, nil
+	return cred.Sign(nil, digest, nil)
 }
 
 // findPubKey returns the raw public key described by label and tag
@@ -106,30 +95,51 @@ func findPubKey(label, tag string, hash []byte) ([]byte, error) {
 	return elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y), nil
 }
 
+// ncryptRemoveKey removes key from tpm storage.
+// TODO: send patch to implement this method upstream.
+func ncryptRemoveKey(cred tpm.Credential) error {
+	key, ok := cred.(*tpm.Key)
+	if !ok {
+		return fmt.Errorf("unexpected key type, got %T, want *certtostore.Key", key)
+	}
+	nCrypt := windows.MustLoadDLL("ncrypt.dll")
+	nCryptDeleteKey := nCrypt.MustFindProc("NCryptDeleteKey")
+	handle := key.TransientTpmHandle()
+	r, _, err := nCryptDeleteKey.Call(
+		handle,
+		0,
+	)
+	if r != 0 {
+		return fmt.Errorf("NCryptDeleteKey returned %X: %v", r, err)
+	}
+	return nil
+}
+
 // removeKey tries to delete a key identified by label, tag and hash.
 // tag and hash are not used
 // Returns true if the key was found and deleted successfully
 func removeKey(label, tag string, _ []byte) (bool, error) {
-	key, err := findPrivateKey(label)
+	cred, err := findPrivateKey(label)
 	if err != nil {
 		return false, fmt.Errorf(ErrRemoveKey, label, tag, err)
 	}
-	if key == nil {
+	if cred == nil {
 		return false, fmt.Errorf("failed to find key with label %q and tag %q", label, tag)
 	}
-	err = key.Delete()
-	if err != nil {
+
+	if err := ncryptRemoveKey(cred); err != nil {
 		return false, fmt.Errorf(ErrRemoveKey, label, tag, err)
 	}
 	return true, nil
 }
 
-func findPrivateKey(label string) (tpm.Key, error) {
-	certStore, err := tpm.OpenWinCertStore(
+func findPrivateKey(label string) (tpm.Credential, error) {
+	certStore, err := tpm.OpenWinCertStoreCurrentUser(
 		keyStorageProvider,
 		label,
 		[]string{},
 		[]string{},
+		false,
 	)
 	if err != nil {
 		return nil, err
