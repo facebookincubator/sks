@@ -71,19 +71,8 @@ func removeKey(label, tag string, hash []byte) (bool, error) {
 	return res, nil
 }
 
-// accessibleWhenUnlockedOnly checks whether or not the protection level for
-// a key (identified by label, tag, and hash) is set to only accessible
-// when the device is unlocked.
-// hash is the SHA1 of the key. Can be nil
-// Returns true if protection is set to accessible when unlocked only.
-// False otherwise.
 func accessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
-	res, err := macos.AccessibleWhenUnlockedOnly(label, tag, hash)
-	if err != nil {
-		return false, fmt.Errorf(ErrAttributeLookup, label, tag, err)
-	}
-
-	return res, nil
+	return false, nil
 }
 
 // updateKeyLabel tries to update a key identified by label, tag and hash
