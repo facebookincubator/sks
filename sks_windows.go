@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	keyStorageProvider = "Microsoft Platform Crypto Provider"
+	// KeyStorageProvider is a provider used by sks.
+	KeyStorageProvider = "Microsoft Platform Crypto Provider"
 
-	// keyDoesNotExistErr is the error returned by Microsoft Crypto Provider
+	// errKeyDoesNotExist is the error returned by Microsoft Crypto Provider
 	// when the requested key was not found in the provider. Taken from
 	// ncrypt.h.
 	errKeyDoesNotExist = "80090016"
@@ -45,7 +46,7 @@ const (
 // tag, useBiometrics, and accessibleWhenUnlockedOnly are ignored
 func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
 	certStore, err := tpm.OpenWinCertStoreCurrentUser(
-		keyStorageProvider,
+		KeyStorageProvider,
 		label,
 		[]string{},
 		[]string{},
@@ -135,7 +136,7 @@ func removeKey(label, tag string, _ []byte) (bool, error) {
 
 func findPrivateKey(label string) (tpm.Credential, error) {
 	certStore, err := tpm.OpenWinCertStoreCurrentUser(
-		keyStorageProvider,
+		KeyStorageProvider,
 		label,
 		[]string{},
 		[]string{},
