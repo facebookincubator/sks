@@ -114,7 +114,6 @@ func GenKeyPair(label, tag string, useBiometrics, accessibleWhenUnlockedOnly boo
 	defer C.CFRelease(C.CFTypeRef(keyAttrs))
 
 	publicKeyData := C.CFDataRef(C.CFDictionaryGetValue(keyAttrs, unsafe.Pointer(C.kSecValueData)))
-	defer C.CFRelease(C.CFTypeRef(publicKeyData))
 
 	return C.GoBytes(
 		unsafe.Pointer(C.CFDataGetBytePtr(publicKeyData)),
@@ -279,7 +278,6 @@ func extractPubKey(key C.SecKeyRef) ([]byte, error) {
 	if val == nilCFData {
 		return nil, fmt.Errorf("cannot extract public key")
 	}
-	defer C.CFRelease(C.CFTypeRef(val))
 
 	return C.GoBytes(
 		unsafe.Pointer(C.CFDataGetBytePtr(val)),
