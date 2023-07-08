@@ -85,7 +85,7 @@ Updates the label of a key to the label provided.
 This will always return an `ErrNotImplemented` on Linux and Windows.
 
 ## Example Usage
-```
+```golang
 key := sks.FromLabelTag("label:tag")
 signer, _ := sks.NewKey(key.Label(), key.Tag(), false, true)
 
