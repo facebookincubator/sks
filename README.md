@@ -76,14 +76,6 @@ Returns the label of the key.
 5. `Tag() string`
 Returns the tag of the key.
 
-6. `AccessibleWhenUnlockedOnly()`
-Returns true if the key is available for singing only when the laptop is unlocked.
-This always returns `true` on Linux and Windows.
-
-7. `UpdateLabel(newLabel string)`
-Updates the label of a key to the label provided.
-This will always return an `ErrNotImplemented` on Linux and Windows.
-
 ## Example Usage
 ```golang
 key := sks.FromLabelTag("label:tag")

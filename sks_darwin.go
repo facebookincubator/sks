@@ -71,18 +71,6 @@ func removeKey(label, tag string, hash []byte) (bool, error) {
 	return res, nil
 }
 
-func accessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
-	return false, nil
-}
-
-// updateKeyLabel tries to update a key identified by label, tag and hash
-// to a new label.
-// hash is the SHA1 of the key. Can be nil
-// Returns an error if the key could not be re-labeled.
-func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
-	return fmt.Errorf(ErrNotImplemented, "updateKeyLabel")
-}
-
 func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 	return nil, fmt.Errorf(ErrNotImplemented, "getSecureHardwareVendorData")
 }

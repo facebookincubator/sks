@@ -157,14 +157,6 @@ func findPrivateKey(label string) (tpm.Credential, error) {
 	return key, nil
 }
 
-func accessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
-	return false, nil
-}
-
-func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
-	return fmt.Errorf(ErrNotImplemented, "updateKeyLabel")
-}
-
 func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 	attestTPMHandle, err := goattest.OpenTPM(nil)
 	if err != nil {

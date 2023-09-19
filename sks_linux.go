@@ -109,14 +109,6 @@ func removeKey(label, tag string, _ []byte) (bool, error) {
 	return true, nil
 }
 
-func accessibleWhenUnlockedOnly(label, tag string, hash []byte) (bool, error) {
-	return false, nil
-}
-
-func updateKeyLabel(label, tag, newLabel string, hash []byte) error {
-	return fmt.Errorf(ErrNotImplemented, "updateKeyLabel")
-}
-
 func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 	tpm, err := getCryptoProcessor()
 	if err != nil {

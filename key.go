@@ -41,13 +41,6 @@ type Key interface {
 
 	// Tag returns the tag of the key
 	Tag() string
-
-	// UpdateLabel changes the key's label to a new one
-	UpdateLabel(newLabel string) error
-
-	// AccessibleWhenUnlockedOnly returns whether or not the key is only
-	// accessible when the device is unlocked
-	AccessibleWhenUnlockedOnly() (bool, error)
 }
 
 // regularKey is an ECDSA P-256 key whose private portion is stored in SKS
@@ -147,21 +140,6 @@ func (k *regularKey) Label() string {
 // Tag returns the tag of the key
 func (k *regularKey) Tag() string {
 	return k.tag
-}
-
-// AccessibleWhenUnlockedOnly returns whether or not the key is only
-// accessible when the device is unlocked
-func (k *regularKey) AccessibleWhenUnlockedOnly() (bool, error) {
-	return accessibleWhenUnlockedOnly(k.label, k.tag, k.Hash())
-}
-
-// UpdateLabel changes the key's label to a new one.
-func (k *regularKey) UpdateLabel(newLabel string) error {
-	err := updateKeyLabel(k.label, k.tag, newLabel, k.Hash())
-	if err == nil {
-		k.label = newLabel
-	}
-	return err
 }
 
 // FromLabelTag constructs a Key identified by label and tag
