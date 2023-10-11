@@ -14,6 +14,8 @@
 
 package attest
 
+import "io"
+
 // EKData contains metadata for a TPM 2.0 Endorsement Key
 type EKData struct {
 	IssuerCN                    string
@@ -35,4 +37,22 @@ type SecureHardwareVendorData struct {
 	VendorName             string
 	VendorInfo             string
 	Version                uint8
+}
+
+// Req represents the request to attest & certify a TPM key
+type Req struct {
+	TPM       io.ReadWriteCloser
+	KeyHandle any
+}
+
+// Resp represents the response from the attestation process
+type Resp struct {
+	AttestationStatement string
+	CertificationParams  string
+	PublicKey            []byte
+}
+
+// Attestor is the interface which performs attestation
+type Attestor interface {
+	Attest(*Req) (*Resp, error)
 }

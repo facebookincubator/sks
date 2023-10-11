@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/facebookincubator/sks/attest"
 )
 
 // Key is an interface that implements the crypto.Signer interface along with
@@ -63,6 +65,11 @@ func LoadKey(label, tag string, hash []byte) (Key, error) {
 	}
 
 	return nil, fmt.Errorf(ErrFindPubKeyNil, label, tag)
+}
+
+// AttestKey will attest the provided SKS key
+func AttestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error) {
+	return attestKey(label, tag, attestor)
 }
 
 // NewKey returns a new key backed by SKS given the corresponding label and tag

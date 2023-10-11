@@ -19,6 +19,7 @@ package sks
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -64,6 +65,39 @@ func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
 	}
 	pubKey := key.Public().(*ecdsa.PublicKey)
 	return elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y), nil
+}
+
+// attestKey performs a TPM 2.0 handshake using the underlying Endorsement
+// key, creates a TPM Attestation key bound to the EK
+// which further certifies that the TPM key represented by the provided label
+// is attested & from the same TPM as the EK.
+func attestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error) {
+	if attestor == nil {
+		return nil, fmt.Errorf(ErrAttestationFailure, label, tag, errors.New("nil attestor handle"))
+	}
+
+	cred, err := findPrivateKey(label)
+	if err != nil {
+		return nil, fmt.Errorf(ErrAttestationFailure, label, tag, err)
+	}
+	if cred == nil {
+		return nil, fmt.Errorf(ErrAttestationFailure, label, tag, errors.New("nil tpm.Credential handle from PCP store"))
+	}
+
+	k, ok := cred.(*tpm.Key)
+	if !ok {
+		return nil, fmt.Errorf(ErrAttestationFailure, label, tag, errors.New("retrieved tpm.Credential has an invalid wrapped PCP key"))
+	}
+
+	handle := k.TransientTpmHandle()
+	resp, err := attestor.Attest(&attest.Req{
+		KeyHandle: handle,
+	})
+	if err != nil {
+		return nil, fmt.Errorf(ErrAttestationFailure, label, tag, err)
+	}
+
+	return resp, nil
 }
 
 // signWithKey signs arbitrary data pointed to by data with the key described by

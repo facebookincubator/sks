@@ -74,3 +74,7 @@ func removeKey(label, tag string, hash []byte) (bool, error) {
 func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 	return nil, fmt.Errorf(ErrNotImplemented, "getSecureHardwareVendorData")
 }
+
+func attestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error) {
+	return nil, fmt.Errorf(ErrNotImplemented, "attestKey")
+}

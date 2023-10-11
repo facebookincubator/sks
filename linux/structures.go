@@ -105,6 +105,9 @@ type Cryptoprocessor interface {
 	// and pass the digest here. The signature is returned in ASN.1 DER format
 	// with only the R and S values.
 	SignWithKey(keyID string, digest []byte) ([]byte, error)
+
+	// AttestKey performs a TPM 2.0 handshake and attests the provided TPM key
+	AttestKey(keyID string, attestor attest.Attestor) (*attest.Resp, error)
 }
 
 // CryptoKey defines the interface any representation of a key to be used with

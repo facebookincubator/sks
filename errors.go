@@ -26,4 +26,5 @@ const (
 	ErrUpdateKeyAttr               = "sks: error updating attribute for key with label %q and tag %q"
 	ErrGetSecureHardwareVendorData = "sks: error fetching Secure Hardware Vendor Data: %w"
 	ErrNotImplemented              = "sks: %q method not implemented"
+	ErrAttestationFailure          = "sks: error while trying to attest key with label %q and tag %q: %w"
 )

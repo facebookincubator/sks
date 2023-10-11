@@ -17,6 +17,7 @@
 package sks
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/facebookincubator/sks/attest"
@@ -54,6 +55,29 @@ func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
 	}
 
 	return res, nil
+}
+
+// attestKey performs a TPM 2.0 handshake using the underlying Endorsement
+// key, creates a TPM Attestation key bound to the EK
+// which further certifies that the TPM key represented by the provided label
+// is attested & from the same TPM as the EK.
+func attestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error) {
+	if attestor == nil {
+		return nil, fmt.Errorf(ErrAttestationFailure, label, tag, errors.New("nil attestor handle"))
+	}
+
+	tpm, err := getCryptoProcessor()
+	if err != nil {
+		return nil, fmt.Errorf(ErrAttestationFailure, label, tag, err)
+	}
+	defer tpm.Close()
+
+	resp, err := tpm.AttestKey(label, attestor)
+	if err != nil {
+		return nil, fmt.Errorf(ErrAttestationFailure, label, tag, err)
+	}
+
+	return resp, nil
 }
 
 // signWithKey signs arbitrary data pointed to by data with the key described by

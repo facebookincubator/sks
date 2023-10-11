@@ -18,10 +18,12 @@
 package linux
 
 import (
+	"bytes"
 	"crypto/elliptic"
 	"encoding/asn1"
 	"fmt"
 
+	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/diskio"
 	"github.com/facebookincubator/sks/utils"
 
@@ -77,6 +79,50 @@ func (tpm *tpmDevice) GenKeyPair(keyID string) (b []byte, err error) {
 	}
 
 	return elliptic.Marshal(elliptic.P256(), pubkey.X, pubkey.Y), nil
+}
+
+// AttestKey performs a TPM 2.0 handshake using the underlying Endorsement
+// key, creates a TPM Attestation key bound to the EK
+// which further certifies that the TPM key represented by the provided label
+// is attested & from the same TPM as the EK.
+func (tpm *tpmDevice) AttestKey(keyID string, attestor attest.Attestor) (*attest.Resp, error) {
+	// First get the org root key so the requested child key can be loaded and
+	// used.
+	orgRootKey, err := tpm.GetOrgRootKey()
+	if err != nil {
+		return nil, fmt.Errorf("error while getting root key: %w", err)
+	}
+	defer func() {
+		if flusherr := tpm.FlushKey(orgRootKey, true); flusherr != nil {
+			flog.Warningf("Failed to flush device key %s: %v", keyID, flusherr)
+		}
+	}()
+
+	// Next get the requested key, or bail if it can't be loaded.
+	key, err := tpm.LoadKey(keyID, orgRootKey.GetHandle(), 0, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not load requested key %q: %w", keyID, err)
+	}
+	defer func() {
+		if flushErr := tpm.FlushKey(key, true); flushErr != nil {
+			flog.Warningf("Failed to flush device key %s: %v", keyID, flushErr)
+		}
+	}()
+
+	resp, err := attestor.Attest(&attest.Req{
+		KeyHandle: key.GetLoadedHandle(),
+		TPM:       tpm.rwc,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("attestation failure: %w", err)
+	}
+
+	// Ensure we attested the expected SKS device key
+	if !bytes.Equal(key.GetPublicBytes(), resp.PublicKey) {
+		return nil, fmt.Errorf("certified incorrect key, expected: %v, certified: %v", key.GetPublicBytes(), resp.PublicKey)
+	}
+
+	return resp, nil
 }
 
 func (tpm *tpmDevice) SignWithKey(keyID string, digest []byte) ([]byte, error) {
