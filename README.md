@@ -89,5 +89,8 @@ signer.Sign(nil, digest, nil)
 signer.Remove()
 ```
 
+> [!NOTE]  
+> To use Secure Enclave on Mac, your app must have a registered App ID (`com.apple.application-identifier` entitlement). For more information, see [this thread](https://developer.apple.com/forums/thread/728150).
+
 ## License
 SKS is published under the Apache v2.0 License.
