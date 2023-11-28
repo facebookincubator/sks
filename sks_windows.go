@@ -212,6 +212,7 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 	for _, ek := range eks {
 		var ekData attest.EKData
 		if ek.Certificate != nil {
+			ekData.Certificate = append(ekData.Certificate, ek.Certificate.Raw...)
 			ekData.IssuerCN = ek.Certificate.Issuer.CommonName
 			ekData.SubjectCN = ek.Certificate.Subject.CommonName
 			ekData.SerialNumber = ek.Certificate.SerialNumber.String()
