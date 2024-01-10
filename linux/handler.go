@@ -153,6 +153,10 @@ func (h *KeyHandler) nextAvailable() (tpmutil.Handle, error) {
 	keys := handlesToSlice(h.handles, nil)
 	keys = handlesToSlice(h.inFlightHandles, keys)
 
+	if len(keys) == 0 {
+		return minValidHandle, nil
+	}
+
 	sort.Slice(keys, func(i, j int) bool {
 		return keys[i] < keys[j]
 	})

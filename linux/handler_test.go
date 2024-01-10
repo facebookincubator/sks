@@ -88,6 +88,27 @@ func TestKeyHandler(t *testing.T) {
 	}
 }
 
+func TestEmptyKeyHandler(t *testing.T) {
+	const (
+		root = "OrgRootKey"
+		test = "test-key"
+	)
+	m := map[string]tpmutil.Handle{
+		root: 0x8101fb01,
+	}
+
+	h := NewKeyHandler(m)
+
+	got, _, err := h.Get(test)
+	if err != nil {
+		t.Fatalf("Get() error: %v", err)
+	}
+	want := minValidHandle
+	if got != want {
+		t.Fatalf("Get() wrong handle: got %#x, want %#x", got, want)
+	}
+}
+
 func TestOrderingGetRemove(t *testing.T) {
 	const dev = "device-key"
 	m := map[string]tpmutil.Handle{
