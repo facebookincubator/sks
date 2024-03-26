@@ -30,7 +30,7 @@ import (
 	"github.com/facebookincubator/flog"
 	attestUtils "github.com/facebookincubator/sks/attest"
 	"github.com/google/go-attestation/attest"
-	"github.com/google/go-tpm/tpm2"
+	"github.com/google/go-tpm/legacy/tpm2"
 	"github.com/google/go-tpm/tpmutil"
 )
 
