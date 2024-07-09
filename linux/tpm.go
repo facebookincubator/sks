@@ -178,6 +178,7 @@ func (tpm *tpmDevice) Close() error {
 	return nil
 }
 
+// FlushKey removes a key from TPM transient storage.
 func (tpm *tpmDevice) FlushKey(key CryptoKey, closeKey bool) error {
 	err := tpm2.FlushContext(tpm.rwc, key.GetLoadedHandle())
 	if err != nil {
@@ -194,6 +195,14 @@ func (tpm *tpmDevice) FlushKey(key CryptoKey, closeKey bool) error {
 	return nil
 }
 
+// GenerateKey generates a key in the TPM. Set persistentHandle to 0 if you
+// don't want the key persisted (it will not be evicted to persistent TPM
+// storage and the handle won't be recorded anywhere). keyID is ignored if
+// persistentHandle is 0. When parent is a hierarchy, both keyID and
+// persistentHandle are ignored. If you want to use the default template
+// (see templates.go; DefaultECCEKTemplate for the primary key and
+// DefaultECCKeyTemplate for other keys) set template to nil, or pass the
+// template to use.
 func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persistentHandle tpmutil.Handle, template *tpm2.Public) (CryptoKey, error) {
 	db, err := diskio.OpenDB()
 	if err != nil {
@@ -370,6 +379,19 @@ func (tpm *tpmDevice) LoadKey(keyID string, parentHandle, persistentHandle tpmut
 	return cpKey, nil
 }
 
+// GetOrgRootKey fetches the organization root key, creating a new one if
+// needed.
+// Having the organization root key requires a primary key, but primary keys
+// cannot be stored. Fortunately, primary keys are generated using the
+// hierarchy seed, so the same template used to generate a key in the same
+// hierarchy will always generate the same key. And since we're using ECC
+// keys, generation is extremely fast.
+// This function wraps the logic of generating the primary key, loading the
+// organization root key if it exists (generating it if not) and returning
+// the organization root key.
+// NOTE: The organization root key will be loaded into the TPM ready for
+// use. This handle IS NOT FLUSHED AUTOMATICALLY! It is the responsibility
+// of the caller to flush the handle as early as possible.
 func (tpm *tpmDevice) GetOrgRootKey() (CryptoKey, error) {
 	// Get the organization root key
 	// We explicitly only want to use the Endorsement Hierarchy, it's the only
@@ -401,6 +423,10 @@ func (tpm *tpmDevice) GetOrgRootKey() (CryptoKey, error) {
 	return rootKey, nil
 }
 
+// LoadDiskKey unmarshals a key from disk storage and returns it. An error is
+// returned for error conditions. Running a TPM simulator or not finding a key
+// in the database are not error conditions, callers should interpret a nil key
+// and error as a signal to generate a new key.
 func (tpm *tpmDevice) LoadDiskKey(keyID string) (CryptoKey, error) {
 	db, err := diskio.OpenDB()
 	if err != nil {

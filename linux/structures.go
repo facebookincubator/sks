@@ -40,9 +40,6 @@ type Cryptoprocessor interface {
 	// fail and you must fetch a new Cryptoprocessor instance.
 	Close() error
 
-	// FlushKey removes a key from TPM transient storage.
-	FlushKey(key CryptoKey, closeKey bool) error
-
 	// GenKeyPair generates a key pair given a label and a tag. The public key
 	// is returned as X and Y in ASN.1 DER format.
 	GenKeyPair(keyID string) ([]byte, error)
@@ -57,48 +54,6 @@ type Cryptoprocessor interface {
 
 	// DeleteKey deletes a key from TPM persistent storage
 	DeleteKey(keyID string) error
-
-	// GetOrgRootKey fetches the organization root key, creating a new one if
-	// needed.
-	// Having the organization root key requires a primary key, but primary keys
-	// cannot be stored. Fortunately, primary keys are generated using the
-	// hierarchy seed, so the same template used to generate a key in the same
-	// hierarchy will always generate the same key. And since we're using ECC
-	// keys, generation is extremely fast.
-	// This function wraps the logic of generating the primary key, loading the
-	// organization root key if it exists (generating it if not) and returning
-	// the organization root key.
-	// NOTE: The organization root key will be loaded into the TPM ready for
-	// use. This handle IS NOT FLUSHED AUTOMATICALLY! It is the responsibility
-	// of the caller to flush the handle as early as possible.
-	GetOrgRootKey() (CryptoKey, error)
-
-	// GenerateKey generates a key in the TPM. Set persistentHandle to 0 if you
-	// don't want the key persisted (it will not be evicted to persistent TPM
-	// storage and the handle won't be recorded anywhere). keyID is ignored if
-	// persistentHandle is 0. When parent is a hierarchy, both keyID and
-	// persistentHandle are ignored. If you want to use the default template
-	// (see templates.go; DefaultECCEKTemplate for the primary key and
-	// DefaultECCKeyTemplate for other keys) set template to nil, or pass the
-	// template to use.
-	GenerateKey(parent tpmutil.Handle, keyID string, persistentHandle tpmutil.Handle, template *tpm2.Public) (CryptoKey, error)
-
-	// LoadKey loads the key with the specified keyID, generating it if it
-	// doesn't exist. The key will be loaded into the TPM ready to use. Set
-	// persistentHandle to the handle the key should be persisted to if it
-	// doesn't exist, and parentHandle to the parent to generate the key under
-	// if it doesn't exist. To specify a specific template to use when
-	// generating keys, use the template parameter. If set to nil, the default
-	// key template will be used.
-	// NOTE: Handles ARE NOT FLUSHED AUTOMATICALLY! It is the caller's
-	// responsibility to flush these handles as early as possible.
-	LoadKey(keyID string, parentHandle, persistentHandle tpmutil.Handle, template *tpm2.Public) (CryptoKey, error)
-
-	// LoadDiskKey unmarshals a key from disk storage and returns it. An error is
-	// returned for error conditions. Running a TPM simulator or not finding a key
-	// in the database are not error conditions, callers should interpret a nil key
-	// and error as a signal to generate a new key.
-	LoadDiskKey(keyID string) (CryptoKey, error)
 
 	// SignWithKey gets the key with the specified keyID and tag and signs the
 	// provided data with it. The caller is expected to have hashed the data
