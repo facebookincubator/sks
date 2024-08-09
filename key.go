@@ -43,6 +43,15 @@ type Key interface {
 
 	// Tag returns the tag of the key
 	Tag() string
+
+	// Encrypted returns the encrypted blob of TPM2.0 transient keys
+	EncryptedBlob() ([]byte, []byte, error)
+
+	// AttestKey will cryptographically attest the key
+	Attest() error
+
+	// Close closes the key
+	Close() error
 }
 
 // regularKey is an ECDSA P-256 key whose private portion is stored in SKS
@@ -147,6 +156,21 @@ func (k *regularKey) Label() string {
 // Tag returns the tag of the key
 func (k *regularKey) Tag() string {
 	return k.tag
+}
+
+// Close closes the key
+func (k *regularKey) Close() error {
+	return nil
+}
+
+// Attest cryptographically attests the key
+func (k *regularKey) Attest() error {
+	return fmt.Errorf(ErrNotImplemented, "Attest")
+}
+
+// EncryptedBlob returns the encrypted blob of the TPM2.0 transient key
+func (k *regularKey) EncryptedBlob() ([]byte, []byte, error) {
+	return nil, nil, fmt.Errorf(ErrNotImplemented, "EncryptedBlob")
 }
 
 // FromLabelTag constructs a Key identified by label and tag

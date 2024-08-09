@@ -14,7 +14,11 @@
 
 package attest
 
-import "io"
+import (
+	"io"
+
+	"github.com/google/go-attestation/attest"
+)
 
 // EKData contains metadata for a TPM 2.0 Endorsement Key
 type EKData struct {
@@ -42,8 +46,11 @@ type SecureHardwareVendorData struct {
 
 // Req represents the request to attest & certify a TPM key
 type Req struct {
-	TPM       io.ReadWriteCloser
-	KeyHandle any
+	AttestTPMHandle    *attest.TPM
+	TransientKeyHandle *attest.Key
+	TransientAKHandle  *attest.AK
+	TPM                io.ReadWriteCloser
+	KeyHandle          any
 }
 
 // Resp represents the response from the attestation process

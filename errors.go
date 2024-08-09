@@ -27,4 +27,8 @@ const (
 	ErrGetSecureHardwareVendorData = "sks: error fetching Secure Hardware Vendor Data: %w"
 	ErrNotImplemented              = "sks: %q method not implemented"
 	ErrAttestationFailure          = "sks: error while trying to attest key with label %q and tag %q: %w"
+	ErrInvalidTPMHandle            = "sks: invalid TPM handle: %s"
+	ErrEmptyTPM20EncryptedBlob     = "sks: empty encrypted TPM2.0 blob: %s"
+	ErrInvalidCryptoSigner         = "sks: private key is not a crypto.Signer"
+	ErrNotSupported                = "sks: API not supported"
 )
