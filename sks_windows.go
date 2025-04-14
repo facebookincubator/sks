@@ -19,6 +19,8 @@ package sks
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rsa"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"strings"
@@ -226,9 +228,21 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 			// from the corresponding vendor's upstream EK fetcher URL
 			ekData.HasCertInNVRAM = false
 			ekData.HasPublicKeyInNVRam = true
+			var (
+				rsaKey *rsa.PublicKey
+				ok     bool
+			)
+			if rsaKey, ok = ek.Public.(*rsa.PublicKey); !ok {
+				return nil, fmt.Errorf("unsupported public key type: %T", ek.Public)
+			}
+			rawPubKey, err := x509.MarshalPKIXPublicKey(rsaKey)
+			if err != nil {
+				return nil, err
+			}
+			ekData.PublicKey = rawPubKey
 			ekData.CertDownloadedFromVendorURL = false
 			ekData.VendorCertificateURL = ek.CertificateURL
-			ekData.PublicKeyAlgorithm = utils.GetPubKeyType(ek.Public)
+			ekData.PublicKeyAlgorithm = utils.GetPubKeyType(*rsaKey)
 		}
 		ekList = append(ekList, ekData)
 	}

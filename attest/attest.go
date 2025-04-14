@@ -23,6 +23,7 @@ import (
 // EKData contains metadata for a TPM 2.0 Endorsement Key
 type EKData struct {
 	Certificate                 []byte // Complete ASN.1 DER content.
+	PublicKey                   []byte
 	IssuerCN                    string
 	SubjectCN                   string
 	SerialNumber                string

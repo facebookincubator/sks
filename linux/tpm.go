@@ -20,6 +20,8 @@ package linux
 // This file contains functions for a cryptographic processor (such as a TPM)
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
@@ -105,9 +107,21 @@ func (tpm *tpmDevice) GetSecureHardwareVendorData() (*attestUtils.SecureHardware
 			// from the corresponding vendor's upstream EK fetcher URL
 			ekData.HasCertInNVRAM = false
 			ekData.HasPublicKeyInNVRam = true
+			var (
+				rsaKey *rsa.PublicKey
+				ok     bool
+			)
+			if rsaKey, ok = ek.Public.(*rsa.PublicKey); !ok {
+				return nil, fmt.Errorf("unsupported public key type: %T", ek.Public)
+			}
+			rawPubKey, err := x509.MarshalPKIXPublicKey(rsaKey)
+			if err != nil {
+				return nil, err
+			}
+			ekData.PublicKey = rawPubKey
 			ekData.CertDownloadedFromVendorURL = false
 			ekData.VendorCertificateURL = ek.CertificateURL
-			ekData.PublicKeyAlgorithm = utils.GetPubKeyType(ek.Public)
+			ekData.PublicKeyAlgorithm = utils.GetPubKeyType(*rsaKey)
 		}
 		ekList = append(ekList, ekData)
 	}
