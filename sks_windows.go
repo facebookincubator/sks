@@ -44,17 +44,37 @@ const (
 	errKeyDoesNotExist = "80090016"
 )
 
-// genKeyPair creates a key with the given label and tag
-// Returns public key raw data.
-// tag, useBiometrics, and accessibleWhenUnlockedOnly are ignored
-func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
-	certStore, err := tpm.OpenWinCertStoreCurrentUser(
+// UseWindowsMachineStore is a flag that can be set to true to use the machine store instead of the user store (default)
+// This is applicable only to Windows.
+var UseWindowsMachineStore bool
+
+// getWindowsCertStore defaults to the current user's cert store, but can be
+// overridden to use the machine cert store by setting UseWindowsMachineStore to true.
+func getWindowsCertStore(label string) (*tpm.WinCertStore, error) {
+	if UseWindowsMachineStore {
+		return tpm.OpenWinCertStore(
+			KeyStorageProvider,
+			label,
+			[]string{},
+			[]string{},
+			false,
+		)
+	}
+
+	return tpm.OpenWinCertStoreCurrentUser(
 		KeyStorageProvider,
 		label,
 		[]string{},
 		[]string{},
 		false,
 	)
+}
+
+// genKeyPair creates a key with the given label and tag
+// Returns public key raw data.
+// tag, useBiometrics, and accessibleWhenUnlockedOnly are ignored
+func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
+	certStore, err := getWindowsCertStore(label)
 	if err != nil {
 		return nil, fmt.Errorf(ErrGenKeyPair, label, tag, err)
 	}
@@ -171,13 +191,7 @@ func removeKey(label, tag string, _ []byte) (bool, error) {
 }
 
 func findPrivateKey(label string) (tpm.Credential, error) {
-	certStore, err := tpm.OpenWinCertStoreCurrentUser(
-		KeyStorageProvider,
-		label,
-		[]string{},
-		[]string{},
-		false,
-	)
+	certStore, err := getWindowsCertStore(label)
 	if err != nil {
 		return nil, err
 	}
