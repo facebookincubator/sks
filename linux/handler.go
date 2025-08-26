@@ -19,7 +19,7 @@ package linux
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/google/go-tpm/tpmutil"
@@ -157,9 +157,7 @@ func (h *KeyHandler) nextAvailable() (tpmutil.Handle, error) {
 		return minValidHandle, nil
 	}
 
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
+	slices.Sort(keys)
 
 	ret := keys[0]
 	for _, key := range keys {
