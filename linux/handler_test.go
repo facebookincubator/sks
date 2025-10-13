@@ -117,7 +117,7 @@ func TestOrderingGetRemove(t *testing.T) {
 
 	h := NewKeyHandler(m)
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		_, flush, err := h.Get(dev)
 		if err != nil {
 			t.Fatalf("Get() error: %v", err)
@@ -150,7 +150,7 @@ func TestOrderingRemoveGet(t *testing.T) {
 
 	h := NewKeyHandler(m)
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		flush := h.Remove(dev)
 
 		order := make(chan int, 2)
