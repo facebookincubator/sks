@@ -266,6 +266,6 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 		IsTPM20CompliantDevice: true,
 		VendorName:             info.Manufacturer.String(),
 		VendorInfo:             info.VendorInfo,
-		Version:                uint8(info.Version),
+		Version:                2, // We only support tpm 2.0
 	}, nil
 }

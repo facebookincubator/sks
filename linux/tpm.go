@@ -68,7 +68,6 @@ func (tpm *tpmDevice) GetSecureHardwareVendorData() (*attestUtils.SecureHardware
 	}
 
 	attestConfig := &attest.OpenConfig{
-		TPMVersion: attest.TPMVersion20,
 		CommandChannel: &attestTPMCommandChannel{
 			tpm.rwc,
 		},
@@ -131,7 +130,7 @@ func (tpm *tpmDevice) GetSecureHardwareVendorData() (*attestUtils.SecureHardware
 		IsTPM20CompliantDevice: true,
 		VendorName:             info.Manufacturer.String(),
 		VendorInfo:             info.VendorInfo,
-		Version:                uint8(info.Version),
+		Version:                2, // This used to be a value injected from go-attest. no longer exist as we only support tpm 2
 	}, nil
 }
 
