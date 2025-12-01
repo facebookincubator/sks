@@ -1,6 +1,6 @@
 module github.com/facebookincubator/sks
 
-go 1.20
+go 1.24.0
 
 require (
 	github.com/facebookincubator/flog v0.0.0-20190930132826-d2511d0ce33c
@@ -9,7 +9,7 @@ require (
 	github.com/google/go-tpm v0.9.0
 	github.com/jgoguen/go-utils v0.0.0-20200211015258-b42ad41486fd
 	github.com/peterbourgon/diskv v2.0.1+incompatible
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.38.0
 )
 
 require (
@@ -21,5 +21,5 @@ require (
 	github.com/google/go-tspi v0.3.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
 )
