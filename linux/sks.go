@@ -21,13 +21,14 @@ import (
 	"bytes"
 	"crypto/elliptic"
 	"encoding/asn1"
+
 	"fmt"
+	"log/slog"
 
 	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/diskio"
 	"github.com/facebookincubator/sks/utils"
 
-	"github.com/facebookincubator/flog"
 	"github.com/google/go-tpm/legacy/tpm2"
 	"github.com/google/go-tpm/tpmutil"
 )
@@ -44,9 +45,7 @@ func (tpm *tpmDevice) GenKeyPair(keyID string) (b []byte, err error) {
 	defer func() {
 		flush(err == nil)
 	}()
-	if flog.V(5) {
-		flog.Debugf("Got key handle for %q: %#x", keyID, newKeyHandle)
-	}
+	slog.Debug(fmt.Sprintf("Got key handle for %q: %#x", keyID, newKeyHandle))
 
 	// First, validate we have an organization root key
 	orgRootKey, err := tpm.GetOrgRootKey()
@@ -54,9 +53,7 @@ func (tpm *tpmDevice) GenKeyPair(keyID string) (b []byte, err error) {
 		return nil, fmt.Errorf("error while getting root key: %w", err)
 	}
 	defer tpm.FlushKey(orgRootKey, true)
-	if flog.V(5) {
-		flog.Debug("Got org root key")
-	}
+	slog.Debug("Got org root key")
 
 	// Possible shortcut: we may be asked for the org root key here.
 	var newKey CryptoKey
@@ -66,9 +63,7 @@ func (tpm *tpmDevice) GenKeyPair(keyID string) (b []byte, err error) {
 			return nil, err
 		}
 		defer tpm.FlushKey(newKey, true)
-		if flog.V(5) {
-			flog.Debugf("Got %q key", keyID)
-		}
+		slog.Debug(fmt.Sprintf("Got %q key", keyID))
 	} else {
 		newKey = orgRootKey
 	}
@@ -94,7 +89,7 @@ func (tpm *tpmDevice) AttestKey(keyID string, attestor attest.Attestor) (*attest
 	}
 	defer func() {
 		if flusherr := tpm.FlushKey(orgRootKey, true); flusherr != nil {
-			flog.Warningf("Failed to flush device key %s: %v", keyID, flusherr)
+			slog.Warn(fmt.Sprintf("Failed to flush device key %s: %v", keyID, flusherr))
 		}
 	}()
 
@@ -105,7 +100,7 @@ func (tpm *tpmDevice) AttestKey(keyID string, attestor attest.Attestor) (*attest
 	}
 	defer func() {
 		if flushErr := tpm.FlushKey(key, true); flushErr != nil {
-			flog.Warningf("Failed to flush device key %s: %v", keyID, flushErr)
+			slog.Warn(fmt.Sprintf("Failed to flush device key %s: %v", keyID, flushErr))
 		}
 	}()
 

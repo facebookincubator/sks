@@ -24,12 +24,12 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/facebookincubator/sks/diskio"
 	"github.com/facebookincubator/sks/utils"
 
-	"github.com/facebookincubator/flog"
 	attestUtils "github.com/facebookincubator/sks/attest"
 	"github.com/google/go-attestation/attest"
 	"github.com/google/go-tpm/legacy/tpm2"
@@ -146,7 +146,7 @@ func (tpm *tpmDevice) Initialize() error {
 
 	tpm.rwc = rwc
 
-	flog.Debugf("Loaded TPM device: %s", tpm.path)
+	slog.Debug(fmt.Sprintf("Loaded TPM device: %s", tpm.path))
 
 	db, err := diskio.OpenDB()
 	if err != nil {
@@ -156,22 +156,22 @@ func (tpm *tpmDevice) Initialize() error {
 	err = db.Visit(func(key string, val []byte) error {
 		var keyobj tpmKey
 		if err := utils.UnmarshalBytes(val, &keyobj); err != nil {
-			flog.Criticalf("Failed to unmarshal key %q: %+v", key, err)
+			slog.Error(fmt.Sprintf("Failed to unmarshal key %q: %+v", key, err))
 			return err
 		}
 		handles[key] = keyobj.Handle
-		flog.Debugf("Found handle for key %q: %#x", key, keyobj.Handle)
+		slog.Debug(fmt.Sprintf("Found handle for key %q: %#x", key, keyobj.Handle))
 		return nil
 	})
 
 	if err != nil {
-		flog.Criticalf("Failed to init key handler: %+v", err)
+		slog.Error(fmt.Sprintf("Failed to init key handler: %+v", err))
 		return err
 	}
 
 	tpm.keyHandler = NewKeyHandler(handles)
 
-	flog.Debugf("Initialized key handler")
+	slog.Debug("Initialized key handler")
 
 	return nil
 }
@@ -227,7 +227,7 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 	if parent == tpm2.HandleEndorsement || parent == tpm2.HandleOwner ||
 		parent == tpm2.HandleNull {
 
-		flog.Debugf("Generating a primary key under hierarchy 0x%x", parent)
+		slog.Debug(fmt.Sprintf("Generating a primary key under hierarchy 0x%x", parent))
 
 		// Yes, the canonical Golang way is to use short assignment. But that
 		// blocks directly using the existing fields in the TPMKey struct. Go
@@ -248,7 +248,7 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 			DefaultECCEKTemplate(),
 		)
 		if err != nil {
-			flog.Debugf("Error in CreatePrimaryEx: %+v", err)
+			slog.Debug(fmt.Sprintf("Error in CreatePrimaryEx: %+v", err))
 			return nil, err
 		}
 
@@ -257,12 +257,12 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 			return nil, err
 		}
 
-		flog.Debugf("Generated primary key at handle 0x%x", key.Handle)
+		slog.Debug(fmt.Sprintf("Generated primary key at handle 0x%x", key.Handle))
 
 		return key, nil
 	}
 
-	flog.Debugf("Generating new key under parent handle 0x%x", parent)
+	slog.Debug(fmt.Sprintf("Generating new key under parent handle 0x%x", parent))
 
 	var keyTmpl tpm2.Public
 	if template == nil {
@@ -270,7 +270,7 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 	} else {
 		keyTmpl = *template
 	}
-	flog.Debugf("Using template: %+v", keyTmpl)
+	slog.Debug(fmt.Sprintf("Using template: %+v", keyTmpl))
 	privateBlob, publicBlob, _, _, _, err := tpm2.CreateKey(
 		tpm.rwc,
 		parent,
@@ -281,10 +281,10 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 		keyTmpl,
 	)
 	if err != nil {
-		flog.Criticalf("Error generating SRK: %+v", err)
+		slog.Error(fmt.Sprintf("Error generating SRK: %+v", err))
 		return nil, err
 	}
-	flog.Debug("Created new key")
+	slog.Debug("Created new key")
 
 	err = key.FillKeyData(publicBlob, privateBlob, nil, nil)
 	if err != nil {
@@ -302,21 +302,21 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 			privateBlob,
 		)
 		if err != nil {
-			flog.Criticalf("Failed to load new key: %+v", err)
+			slog.Error(fmt.Sprintf("Failed to load new key: %+v", err))
 			return nil, err
 		}
 		defer tpm2.FlushContext(tpm.rwc, loadedHandle)
-		flog.Debugf("Loaded new key at handle 0x%x", loadedHandle)
+		slog.Debug(fmt.Sprintf("Loaded new key at handle 0x%x", loadedHandle))
 
 		// Attempt to remove the key stored at persistentHandle, in case one
 		// already exists in the TPM and/or disk cache.
 		err = tpm.doKeyDeletion(keyID, persistentHandle, false)
 		if err != nil {
-			flog.Errorf(
+			slog.Error(fmt.Sprintf(
 				"Failed deleting key at NV index 0x%x: %+v",
 				persistentHandle,
 				err,
-			)
+			))
 		}
 
 		err = tpm2.EvictControl(
@@ -332,27 +332,27 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 			persistentHandle,
 		)
 		if err != nil {
-			flog.Criticalf(
-				"Failed to evict new key to persistent storage: %+v", err)
+			slog.Error(fmt.Sprintf(
+				"Failed to evict new key to persistent storage: %+v", err))
 			return nil, err
 		}
 		key.Handle = persistentHandle
-		flog.Debugf("Key persisted to storage at handle 0x%x", persistentHandle)
+		slog.Debug(fmt.Sprintf("Key persisted to storage at handle 0x%x", persistentHandle))
 
 		// Now save the key so we can use it later, needed for loading the key
 		// into the TPM once it's been flushed.S
 		keyBytes, err := utils.MarshalBytes(key)
 		if err != nil {
-			flog.Criticalf("Failed to marshal key: %+v", err)
+			slog.Error(fmt.Sprintf("Failed to marshal key: %+v", err))
 			return nil, err
 		}
 
 		_, err = db.Save(keyID, keyBytes)
 		if err != nil {
-			flog.Criticalf("Failed to save marshaled key to disk: %+v", err)
+			slog.Error(fmt.Sprintf("Failed to save marshaled key to disk: %+v", err))
 			return nil, err
 		}
-		flog.Debugf("Key marshaled with identifier %s", keyID)
+		slog.Debug(fmt.Sprintf("Key marshaled with identifier %s", keyID))
 	}
 
 	return key, nil
@@ -365,7 +365,7 @@ func (tpm *tpmDevice) LoadKey(keyID string, parentHandle, persistentHandle tpmut
 	}
 
 	if cpKey == nil || cpKey.IsEmpty() {
-		flog.Warningf("Key '%s' not found, attempting to create it", keyID)
+		slog.Warn(fmt.Sprintf("Key '%s' not found, attempting to create it", keyID))
 
 		cpKey, err = tpm.GenerateKey(
 			parentHandle, keyID, persistentHandle, template)
@@ -412,11 +412,11 @@ func (tpm *tpmDevice) GetOrgRootKey() (CryptoKey, error) {
 	// when there are privacy considerations.
 	primaryKey, err := tpm.GenerateKey(tpm2.HandleEndorsement, "", 0, nil)
 	if err != nil {
-		flog.Debugf("Error generating new primary key: %+v", err)
+		slog.Debug(fmt.Sprintf("Error generating new primary key: %+v", err))
 		return nil, err
 	}
 	defer tpm2.FlushContext(tpm.rwc, primaryKey.GetHandle())
-	flog.Debug("Generated primary key")
+	slog.Debug("Generated primary key")
 
 	// Try to load the organization root key, create it if it doesn't exist
 	rootKeyTmpl := DefaultECCEKTemplate()
@@ -427,11 +427,11 @@ func (tpm *tpmDevice) GetOrgRootKey() (CryptoKey, error) {
 		&rootKeyTmpl,
 	)
 	if err != nil {
-		flog.Criticalf("Error loading organization root key: %+v", err)
+		slog.Error(fmt.Sprintf("Error loading organization root key: %+v", err))
 		return nil, err
 	}
-	flog.Debugf(
-		"Found organization root key with handle 0x%x", rootKey.GetHandle())
+	slog.Debug(fmt.Sprintf(
+		"Found organization root key with handle 0x%x", rootKey.GetHandle()))
 
 	return rootKey, nil
 }
@@ -448,27 +448,27 @@ func (tpm *tpmDevice) LoadDiskKey(keyID string) (CryptoKey, error) {
 
 	keyBytes, err := db.Load(keyID)
 	if err != nil {
-		flog.Warningf("Got error loading key from disk: %+v", err)
+		slog.Warn(fmt.Sprintf("Got error loading key from disk: %+v", err))
 		return nil, nil
 	}
 	if len(keyBytes) <= 0 {
-		flog.Warning("Loaded key file but got no data")
+		slog.Warn("Loaded key file but got no data")
 		return nil, nil
 	}
 
-	flog.Debugf("Attempting to unmarshal key '%s'", keyID)
+	slog.Debug(fmt.Sprintf("Attempting to unmarshal key '%s'", keyID))
 
 	var keyobj tpmKey
 	if err := utils.UnmarshalBytes(keyBytes, &keyobj); err != nil {
-		flog.Criticalf("Failed to unmarshal key '%s': %+v", keyID, err)
+		slog.Error(fmt.Sprintf("Failed to unmarshal key '%s': %+v", keyID, err))
 		return nil, err
 	}
 
 	if keyobj.IsEmpty() {
-		flog.Warningf(
+		slog.Warn(fmt.Sprintf(
 			"Key '%s' loaded, but has no data; generate a new key",
 			keyID,
-		)
+		))
 		return nil, nil
 	}
 

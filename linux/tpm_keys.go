@@ -19,11 +19,12 @@ package linux
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
 	"reflect"
 
 	"github.com/facebookincubator/sks/utils"
 
-	"github.com/facebookincubator/flog"
 	"github.com/google/go-tpm/legacy/tpm2"
 	"github.com/google/go-tpm/tpmutil"
 )
@@ -80,7 +81,7 @@ func (key *tpmKey) GetPublicArea() tpm2.Public {
 
 func (key *tpmKey) GetPublicBytes() []byte {
 	if key.IsEmpty() {
-		flog.Warningf("Empty key. Cannot get public bytes.")
+		slog.Warn("Empty key. Cannot get public bytes.")
 		return nil
 	}
 
@@ -90,7 +91,7 @@ func (key *tpmKey) GetPublicBytes() []byte {
 
 	rawBytes, err := key.PublicArea.Encode()
 	if err != nil {
-		flog.Warningf("Got error decoding key public area: %v", err)
+		slog.Warn(fmt.Sprintf("Got error decoding key public area: %v", err))
 		return nil
 	}
 
@@ -111,7 +112,7 @@ func (key *tpmKey) GetPrivateBytes() []byte {
 		if err == nil {
 			return rawBytes
 		}
-		flog.Warningf("Got error decoding key private area: %v", err)
+		slog.Warn(fmt.Sprintf("Got error decoding key private area: %v", err))
 	}
 
 	return nil
@@ -126,7 +127,7 @@ func (key *tpmKey) FillKeyData(publicBytes, privateBytes, creationData, keyName 
 		if err != nil {
 			return err
 		}
-		flog.Debug("Decoded key public area")
+		slog.Debug("Decoded key public area")
 	}
 
 	if privateBytes != nil {
@@ -138,7 +139,7 @@ func (key *tpmKey) FillKeyData(publicBytes, privateBytes, creationData, keyName 
 		if err != nil {
 			return err
 		}
-		flog.Debug("Decoded key creation data")
+		slog.Debug("Decoded key creation data")
 	}
 
 	if keyName != nil {
@@ -147,29 +148,29 @@ func (key *tpmKey) FillKeyData(publicBytes, privateBytes, creationData, keyName 
 		}
 		byteCount, err := tpmutil.Unpack(keyName, &key.Name.Digest.Alg)
 		if err != nil {
-			flog.Warningf("Got error decoding key name, ignoring: %+v", err)
+			slog.Warn(fmt.Sprintf("Got error decoding key name, ignoring: %+v", err))
 			key.Name = tpm2.Name{}
 		} else {
 			key.Name.Digest.Value = keyName[byteCount:]
 			// Validate the key name digest value
 			hashFunc, err := key.Name.Digest.Alg.Hash()
 			if err != nil {
-				flog.Warningf(
+				slog.Warn(fmt.Sprintf(
 					"Failed to get key digest algorithm hash constructor, ignoring: %+v",
 					err,
-				)
+				))
 				key.Name = tpm2.Name{}
 			} else {
 				if hashFunc.Size() != len(key.Name.Digest.Value) {
-					flog.Warningf(
+					slog.Warn(fmt.Sprintf(
 						"Failed to validate key name value: expected digest length %d, got %d; ignoring name",
 						hashFunc.Size(),
 						len(key.Name.Digest.Value),
-					)
+					))
 					key.Name = tpm2.Name{}
 				}
 			}
-			flog.Debug("Key name set")
+			slog.Debug("Key name set")
 		}
 	}
 
