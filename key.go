@@ -61,21 +61,6 @@ type regularKey struct {
 	tag    string
 }
 
-// LoadKey returns an existing key backed by SKS given the corresponding label, tag, and hash
-func LoadKey(label, tag string, hash []byte) (Key, error) {
-	if pubKey, err := findPubKey(label, tag, hash); err != nil {
-		return nil, err
-	} else if pubKey != nil {
-		return &regularKey{
-			pubKey: rawToEcdsa(pubKey),
-			label:  label,
-			tag:    tag,
-		}, nil
-	}
-
-	return nil, fmt.Errorf(ErrFindPubKeyNil, label, tag)
-}
-
 // AttestKey will attest the provided SKS key
 func AttestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error) {
 	return attestKey(label, tag, attestor)
