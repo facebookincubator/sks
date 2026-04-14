@@ -22,32 +22,6 @@ import (
 	"github.com/peterbourgon/diskv"
 )
 
-// KeyValueStore is a thin wrapper around Diskv. It requires only the functions
-// actually used here to allow us to mock calls. Accordingly, the documentation
-// for the interface methods is basically the Diskv documentation, since that is
-// the contract to be fulfilled.
-type KeyValueStore interface {
-	// Read reads the key and returns the value.
-	Read(key string) ([]byte, error)
-
-	// Write synchronously writes the key-value pair to disk, making it
-	// immediately available for reads. Write relies on the filesystem to
-	// perform an eventual sync to physical media.
-	Write(key string, val []byte) error
-
-	// Has returns true if the given key exists.
-	Has(key string) bool
-
-	// Erase synchronously erases the given key from the disk (and the cache, if
-	// one is in use).
-	Erase(key string) error
-
-	// Keys returns a channel that will yield every key accessible by the store,
-	// in undefined order. If a cancel channel is provided, closing it will
-	// terminate and close the keys channel.
-	Keys(cancel <-chan struct{}) <-chan string
-}
-
 // Database defines an interface for a database utility
 type Database interface {
 	// Load loads the data from the DB with the specified key.
