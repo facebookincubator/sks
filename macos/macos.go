@@ -41,12 +41,13 @@ const (
 )
 
 // GenKeyPair creates a key with the given label and tag.
-// useBiometrics and accessibleWhenUnlockedOnly are ignored,
-// they are present for API compatibility.
+// When useBiometrics is set the key requires user presence (Touch ID, or the device
+// passcode where biometrics is unavailable) to use.
+// accessibleWhenUnlockedOnly is ignored, it is present for API compatibility.
 // Returns public key raw data.
 func GenKeyPair(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool) ([]byte, error) {
 	protection := C.kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-	flags := C.kSecAccessControlPrivateKeyUsage
+	flags := accessControlFlags(useBiometrics)
 
 	cfTag, err := newCFData([]byte(tag))
 	if err != nil {
@@ -283,6 +284,14 @@ func extractPubKey(key C.SecKeyRef) ([]byte, error) {
 		unsafe.Pointer(C.CFDataGetBytePtr(val)),
 		C.int(C.CFDataGetLength(val)),
 	), nil
+}
+
+func accessControlFlags(useBiometrics bool) uint {
+	flags := uint(C.kSecAccessControlPrivateKeyUsage)
+	if useBiometrics {
+		flags |= uint(C.kSecAccessControlUserPresence)
+	}
+	return flags
 }
 
 func newCFData(d []byte) (C.CFDataRef, error) {
