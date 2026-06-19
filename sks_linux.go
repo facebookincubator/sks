@@ -142,3 +142,30 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 
 	return tpm.GetSecureHardwareVendorData()
 }
+
+// enumerate returns a Key for every user key in the on-disk store. tag is
+// recorded on each returned Key but is not used to filter, as Linux keys are
+// identified by label alone.
+func enumerate(tag string) ([]Key, error) {
+	tpm, err := getCryptoProcessor()
+	if err != nil {
+		return nil, err
+	}
+	defer tpm.Close()
+
+	infos, err := tpm.EnumerateKeys()
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]Key, 0, len(infos))
+	for _, info := range infos {
+		keys = append(keys, &regularKey{
+			pubKey: rawToEcdsa(info.PublicKey),
+			label:  info.Label,
+			tag:    tag,
+		})
+	}
+
+	return keys, nil
+}

@@ -61,8 +61,21 @@ type Cryptoprocessor interface {
 	// with only the R and S values.
 	SignWithKey(keyID string, digest []byte) ([]byte, error)
 
+	// EnumerateKeys returns the label and raw public key of every user key in
+	// the on-disk store.
+	EnumerateKeys() ([]KeyInfo, error)
+
 	// AttestKey performs a TPM 2.0 handshake and attests the provided TPM key
 	AttestKey(keyID string, attestor attest.Attestor) (*attest.Resp, error)
+}
+
+// KeyInfo describes a key returned by EnumerateKeys.
+type KeyInfo struct {
+	// Label is the key's label.
+	Label string
+
+	// PublicKey is the raw public key, as X and Y in ASN.1 DER format.
+	PublicKey []byte
 }
 
 // CryptoKey defines the interface any representation of a key to be used with

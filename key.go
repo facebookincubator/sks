@@ -172,6 +172,13 @@ func FromLabelTag(labelTag string) Key {
 	return k
 }
 
+// Enumerate returns a Key for every key held in the secure hardware that
+// carries the given tag, with the public key of each populated. It is not
+// implemented on Windows.
+func Enumerate(tag string) ([]Key, error) {
+	return enumerate(tag)
+}
+
 // rawToEcdsa turns an ASN.1 encoded byte stream to an ecdsa public key
 // It is assumed that the curve of the key is P-256
 func rawToEcdsa(raw []byte) *ecdsa.PublicKey {

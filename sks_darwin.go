@@ -78,3 +78,22 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 func attestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error) {
 	return nil, fmt.Errorf(ErrNotImplemented, "attestKey")
 }
+
+// enumerate returns a Key for every secure-element key carrying tag.
+func enumerate(tag string) ([]Key, error) {
+	attrs, err := macos.Enumerate(tag)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]Key, 0, len(attrs))
+	for _, a := range attrs {
+		keys = append(keys, &regularKey{
+			pubKey: rawToEcdsa(a.PublicKey),
+			label:  a.Label,
+			tag:    tag,
+		})
+	}
+
+	return keys, nil
+}

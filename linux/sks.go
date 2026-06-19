@@ -189,6 +189,39 @@ func (tpm *tpmDevice) FindPubKey(keyID string) ([]byte, error) {
 	return elliptic.Marshal(elliptic.P256(), pubKey.X, pubKey.Y), nil
 }
 
+// EnumerateKeys returns the label and raw public key of every user key in the
+// on-disk store, skipping the internal organization root key.
+func (tpm *tpmDevice) EnumerateKeys() ([]KeyInfo, error) {
+	db, err := diskio.OpenDB()
+	if err != nil {
+		return nil, err
+	}
+
+	labels, err := db.List()
+	if err != nil {
+		return nil, err
+	}
+
+	infos := make([]KeyInfo, 0, len(labels))
+	for _, label := range labels {
+		if label == diskio.OrgRootKey {
+			continue
+		}
+
+		pubKey, err := tpm.FindPubKey(label)
+		if err != nil {
+			return nil, err
+		}
+		if pubKey == nil {
+			continue
+		}
+
+		infos = append(infos, KeyInfo{Label: label, PublicKey: pubKey})
+	}
+
+	return infos, nil
+}
+
 func (tpm *tpmDevice) DeleteKey(keyID string) error {
 	key, err := tpm.LoadDiskKey(keyID)
 	if err != nil {
