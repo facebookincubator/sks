@@ -230,6 +230,8 @@ type KeyAttributes struct {
 
 // Enumerate returns every secure-element key carrying tag, each with its label
 // and raw public key. It returns an empty slice when no key matches.
+// The query is constrained to the Secure Enclave token, so only hardware-backed
+// keys are ever returned, even if a software EC key happens to share the tag.
 func Enumerate(tag string) ([]KeyAttributes, error) {
 	cfTag, err := newCFData([]byte(tag))
 	if err != nil {
@@ -242,6 +244,7 @@ func Enumerate(tag string) ([]KeyAttributes, error) {
 		C.CFTypeRef(C.kSecAttrKeyType):        C.CFTypeRef(C.kSecAttrKeyTypeEC),
 		C.CFTypeRef(C.kSecAttrApplicationTag): C.CFTypeRef(cfTag),
 		C.CFTypeRef(C.kSecAttrKeyClass):       C.CFTypeRef(C.kSecAttrKeyClassPrivate),
+		C.CFTypeRef(C.kSecAttrTokenID):        C.CFTypeRef(C.kSecAttrTokenIDSecureEnclave),
 		C.CFTypeRef(C.kSecReturnRef):          C.CFTypeRef(C.kCFBooleanTrue),
 		C.CFTypeRef(C.kSecReturnAttributes):   C.CFTypeRef(C.kCFBooleanTrue),
 		C.CFTypeRef(C.kSecMatchLimit):         C.CFTypeRef(C.kSecMatchLimitAll),

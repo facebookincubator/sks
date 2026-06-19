@@ -57,7 +57,8 @@ in SKS. The public key of the structure implementing the `Key` interface is not 
 
 3. `Enumerate(tag string) ([]Key, error)`
 This function returns a `Key` for every key held in the secure hardware that carries the
-given tag, with the public key of each populated. It is not implemented on Windows.
+given tag, with the public key of each populated. On macOS the query is constrained to the
+Secure Enclave, so only hardware-backed keys are returned. It is not implemented on Windows.
 
 The `Key` interface implements the `crypto.Signer` interface with some additional functions
 specific to SKS.
