@@ -79,19 +79,22 @@ func attestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error
 	return nil, fmt.Errorf(ErrNotImplemented, "attestKey")
 }
 
-// enumerate returns a Key for every secure-element key carrying tag.
-func enumerate(tag string) ([]Key, error) {
+// enumerate returns an EnumeratedKey for every secure-element key carrying tag.
+func enumerate(tag string) ([]EnumeratedKey, error) {
 	attrs, err := macos.Enumerate(tag)
 	if err != nil {
 		return nil, err
 	}
 
-	keys := make([]Key, 0, len(attrs))
+	keys := make([]EnumeratedKey, 0, len(attrs))
 	for _, a := range attrs {
-		keys = append(keys, &regularKey{
-			pubKey: rawToEcdsa(a.PublicKey),
-			label:  a.Label,
-			tag:    tag,
+		keys = append(keys, EnumeratedKey{
+			Key: &regularKey{
+				pubKey: rawToEcdsa(a.PublicKey),
+				label:  a.Label,
+				tag:    tag,
+			},
+			Created: a.Created,
 		})
 	}
 

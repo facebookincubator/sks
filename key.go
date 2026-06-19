@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/facebookincubator/sks/attest"
 )
@@ -172,10 +173,19 @@ func FromLabelTag(labelTag string) Key {
 	return k
 }
 
-// Enumerate returns a Key for every key held in the secure hardware that
-// carries the given tag, with the public key of each populated. It is not
+// EnumeratedKey is a Key returned by Enumerate together with its creation time.
+type EnumeratedKey struct {
+	Key
+
+	// Created is when the key was created, or the zero time if the platform does
+	// not record it.
+	Created time.Time
+}
+
+// Enumerate returns an EnumeratedKey for every key held in the secure hardware
+// that carries the given tag, with the public key of each populated. It is not
 // implemented on Windows.
-func Enumerate(tag string) ([]Key, error) {
+func Enumerate(tag string) ([]EnumeratedKey, error) {
 	return enumerate(tag)
 }
 

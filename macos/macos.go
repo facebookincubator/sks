@@ -27,6 +27,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"time"
 	"unsafe"
 )
 
@@ -34,11 +35,16 @@ const (
 	nilSecKey           C.SecKeyRef           = 0
 	nilCFData           C.CFDataRef           = 0
 	nilCFString         C.CFStringRef         = 0
+	nilCFDate           C.CFDateRef           = 0
 	nilCFDictionary     C.CFDictionaryRef     = 0
 	nilCFError          C.CFErrorRef          = 0
 	nilCFType           C.CFTypeRef           = 0
 	nilSecAccessControl C.SecAccessControlRef = 0
 )
+
+// cfEpochToUnix is the number of seconds between the Unix epoch (1970) and the
+// Core Foundation absolute time reference (2001).
+const cfEpochToUnix = 978307200
 
 // GenKeyPair creates a key with the given label and tag.
 // useBiometrics and accessibleWhenUnlockedOnly are ignored,
@@ -226,6 +232,9 @@ type KeyAttributes struct {
 
 	// PublicKey is the raw public key data.
 	PublicKey []byte
+
+	// Created is when the key was created, or the zero time if unavailable.
+	Created time.Time
 }
 
 // Enumerate returns every secure-element key carrying tag, each with its label
@@ -277,10 +286,21 @@ func Enumerate(tag string) ([]KeyAttributes, error) {
 		}
 
 		label := goString(C.CFStringRef(C.CFDictionaryGetValue(attrs, unsafe.Pointer(C.kSecAttrLabel))))
-		keys = append(keys, KeyAttributes{Label: label, PublicKey: pubKey})
+		created := goTime(C.CFDateRef(C.CFDictionaryGetValue(attrs, unsafe.Pointer(C.kSecAttrCreationDate))))
+		keys = append(keys, KeyAttributes{Label: label, PublicKey: pubKey, Created: created})
 	}
 
 	return keys, nil
+}
+
+// goTime converts a CFDate to a time.Time, returning the zero time for a nil
+// date. CFAbsoluteTime counts seconds from the 2001 reference date.
+func goTime(ref C.CFDateRef) time.Time {
+	if ref == nilCFDate {
+		return time.Time{}
+	}
+	secs := float64(C.CFDateGetAbsoluteTime(ref)) + cfEpochToUnix
+	return time.Unix(int64(secs), 0).UTC()
 }
 
 func fetchSEPrivKey(label, tag string, hash []byte) (C.SecKeyRef, error) {

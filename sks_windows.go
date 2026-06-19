@@ -272,6 +272,6 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 
 // enumerate is not implemented on Windows: the Platform Crypto Provider does
 // not expose listing keys by tag.
-func enumerate(_ string) ([]Key, error) {
+func enumerate(_ string) ([]EnumeratedKey, error) {
 	return nil, fmt.Errorf(ErrNotImplemented, "Enumerate")
 }

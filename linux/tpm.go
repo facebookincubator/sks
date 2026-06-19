@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/facebookincubator/sks/diskio"
 	"github.com/facebookincubator/sks/utils"
@@ -291,6 +292,7 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 		return nil, err
 	}
 	key.Parent = parent
+	key.Created = time.Now().Unix()
 
 	if persistentHandle > 0 {
 		// Need to load the key, then evict it, and unload it when we're done

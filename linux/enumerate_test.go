@@ -71,6 +71,9 @@ func TestEnumerateKeys(t *testing.T) {
 		if len(info.PublicKey) == 0 {
 			t.Errorf("key %q has an empty public key", info.Label)
 		}
+		if info.Created.IsZero() {
+			t.Errorf("key %q has no creation time", info.Label)
+		}
 		got[info.Label] = true
 	}
 
