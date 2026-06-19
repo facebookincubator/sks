@@ -56,9 +56,26 @@ type Key interface {
 
 // regularKey is an ECDSA P-256 key whose private portion is stored in SKS
 type regularKey struct {
-	pubKey *ecdsa.PublicKey
-	label  string
-	tag    string
+	pubKey    *ecdsa.PublicKey
+	label     string
+	tag       string
+	authValue []byte
+}
+
+// KeyOption configures optional behaviour on a Key returned by NewKey or
+// FromLabelTag.
+type KeyOption func(*regularKey)
+
+// WithAuthValue binds an authorization value to the key. On platforms whose
+// secure hardware authenticates key use with a secret (the TPM authValue on
+// Linux) the value is set on the key when it is created with useBiometrics and
+// is required to sign with it; the value must match the one given at creation.
+// It is ignored on platforms that gate presence in the operating system (macOS,
+// where useBiometrics maps to a Secure Enclave user-presence ACL).
+func WithAuthValue(authValue []byte) KeyOption {
+	return func(k *regularKey) {
+		k.authValue = authValue
+	}
 }
 
 // AttestKey will attest the provided SKS key
@@ -68,26 +85,26 @@ func AttestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error
 
 // NewKey returns a new key backed by SKS given the corresponding label and tag
 // useBiometrics and accessibleWhenUnlockedOnly are not taken into account if the key already exist
-func NewKey(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool, hash []byte) (Key, error) {
+// Pass WithAuthValue to require an authorization value when signing (Linux only).
+func NewKey(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool, hash []byte, opts ...KeyOption) (Key, error) {
+	k := &regularKey{label: label, tag: tag}
+	for _, opt := range opts {
+		opt(k)
+	}
+
 	if pubKey, err := findPubKey(label, tag, hash); err != nil {
 		return nil, err
 	} else if pubKey != nil {
-		return &regularKey{
-			pubKey: rawToEcdsa(pubKey),
-			label:  label,
-			tag:    tag,
-		}, nil
+		k.pubKey = rawToEcdsa(pubKey)
+		return k, nil
 	}
 
-	pubKey, err := genKeyPair(label, tag, useBiometrics, accessibleWhenUnlockedOnly)
+	pubKey, err := genKeyPair(label, tag, useBiometrics, accessibleWhenUnlockedOnly, k.authValue)
 	if err != nil {
 		return nil, err
 	}
-	return &regularKey{
-		pubKey: rawToEcdsa(pubKey),
-		label:  label,
-		tag:    tag,
-	}, nil
+	k.pubKey = rawToEcdsa(pubKey)
+	return k, nil
 }
 
 // Remove removes the key from the SKS
@@ -120,7 +137,7 @@ func (k *regularKey) Public() crypto.PublicKey {
 // Sign signs the arbitrary data in digest with the key
 // The first argument `rand` is discarded in favour of the internal implementation
 func (k *regularKey) Sign(_ io.Reader, digest []byte, _ crypto.SignerOpts) ([]byte, error) {
-	return signWithKey(k.label, k.tag, k.Hash(), digest)
+	return signWithKey(k.label, k.tag, k.Hash(), digest, k.authValue)
 }
 
 // HashKey returns the SHA1 hash of the key
@@ -161,13 +178,18 @@ func (k *regularKey) EncryptedBlob() ([]byte, []byte, error) {
 // FromLabelTag constructs a Key identified by label and tag
 // without looking up the key in SKS so the public key of the
 // structure is not populated.
-func FromLabelTag(labelTag string) Key {
+// Pass WithAuthValue to sign with a key that requires an authorization
+// value (Linux only).
+func FromLabelTag(labelTag string, opts ...KeyOption) Key {
 	f := strings.SplitN(labelTag, ":", 2)
 	k := &regularKey{
 		label: f[0],
 	}
 	if len(f) > 1 {
 		k.tag = f[1]
+	}
+	for _, opt := range opts {
+		opt(k)
 	}
 	return k
 }

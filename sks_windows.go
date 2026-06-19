@@ -73,7 +73,9 @@ func getWindowsCertStore(label string) (*tpm.WinCertStore, error) {
 // genKeyPair creates a key with the given label and tag
 // Returns public key raw data.
 // tag, useBiometrics, and accessibleWhenUnlockedOnly are ignored
-func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
+// authValue is ignored on Windows, where the Platform Crypto Provider manages
+// key protection.
+func genKeyPair(label, tag string, _, _ bool, _ []byte) ([]byte, error) {
 	certStore, err := getWindowsCertStore(label)
 	if err != nil {
 		return nil, fmt.Errorf(ErrGenKeyPair, label, tag, err)
@@ -125,7 +127,9 @@ func attestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error
 // signWithKey signs arbitrary data pointed to by data with the key described by
 // label and tag. Returns the signed data.
 // tag and key hash are not used.
-func signWithKey(label, tag string, _, digest []byte) ([]byte, error) {
+// authValue is ignored on Windows, where the Platform Crypto Provider manages
+// key protection.
+func signWithKey(label, tag string, _, digest, _ []byte) ([]byte, error) {
 	cred, err := findPrivateKey(label)
 	if err != nil {
 		return nil, fmt.Errorf(ErrSignWithKey, label, tag, err)

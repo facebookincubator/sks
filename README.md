@@ -44,16 +44,24 @@ Some features do not work due to limitations of the platforms:
 ## The API
 The library exposes a number of functions for creating and identifying a public/private key pair:
 
-1. `NewKey(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool) (Key, error)`
+1. `NewKey(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool, hash []byte, opts ...KeyOption) (Key, error)`
 This function generates a public/private key pair in the underlying hardware and returns
 a structure implementing the `Key` interface or an error if it occurred. The key is
 identified by two arbitrary strings the label and the tag. `useBiometrics` and
 `accessibleWhenUnlockedOnly` have no effect on Linux. Currently this produces only ECSDA
-P256 keys.
+P256 keys. Pass `WithAuthValue` to create a key that requires an authorization value to
+sign; on macOS user presence is enforced by the Secure Enclave instead and the value is
+ignored.
 
-2. `FromLabelTag(labelTag string) Key`
+2. `FromLabelTag(labelTag string, opts ...KeyOption) Key`
 This function constructs a `Key` identified by label and tag without looking up the key
 in SKS. The public key of the structure implementing the `Key` interface is not populated.
+Pass `WithAuthValue` to sign with a key that was created requiring an authorization value.
+
+3. `WithAuthValue(authValue []byte) KeyOption`
+An option for `NewKey` and `FromLabelTag` that binds an authorization value to the key.
+On Linux the value is set on the key when it is created with `useBiometrics` and is then
+required to sign with it. It is ignored on macOS.
 
 The `Key` interface implements the `crypto.Signer` interface with some additional functions
 specific to SKS.
@@ -79,7 +87,7 @@ Returns the tag of the key.
 ## Example Usage
 ```golang
 key := sks.FromLabelTag("label:tag")
-signer, _ := sks.NewKey(key.Label(), key.Tag(), false, true)
+signer, _ := sks.NewKey(key.Label(), key.Tag(), false, true, nil)
 
 digest := make([]byte, 32)
 rand.Read(digest)

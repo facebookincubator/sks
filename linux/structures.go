@@ -41,8 +41,9 @@ type Cryptoprocessor interface {
 	Close() error
 
 	// GenKeyPair generates a key pair given a label and a tag. The public key
-	// is returned as X and Y in ASN.1 DER format.
-	GenKeyPair(keyID string) ([]byte, error)
+	// is returned as X and Y in ASN.1 DER format. When authValue is non-empty
+	// the key is created requiring that value to authorize signing.
+	GenKeyPair(keyID string, authValue []byte) ([]byte, error)
 
 	// GetSecureHardwareVendorData gets vendor specific information from the secure
 	// hardware implementation available for a given device
@@ -58,8 +59,9 @@ type Cryptoprocessor interface {
 	// SignWithKey gets the key with the specified keyID and tag and signs the
 	// provided data with it. The caller is expected to have hashed the data
 	// and pass the digest here. The signature is returned in ASN.1 DER format
-	// with only the R and S values.
-	SignWithKey(keyID string, digest []byte) ([]byte, error)
+	// with only the R and S values. authValue must match the value the key was
+	// created with, if any.
+	SignWithKey(keyID string, digest, authValue []byte) ([]byte, error)
 
 	// AttestKey performs a TPM 2.0 handshake and attests the provided TPM key
 	AttestKey(keyID string, attestor attest.Attestor) (*attest.Resp, error)
