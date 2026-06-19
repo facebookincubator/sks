@@ -219,6 +219,67 @@ func RemoveKey(label, tag string, hash []byte) (bool, error) {
 	return true, nil
 }
 
+// KeyAttributes describes a key returned by Enumerate.
+type KeyAttributes struct {
+	// Label is the key's label.
+	Label string
+
+	// PublicKey is the raw public key data.
+	PublicKey []byte
+}
+
+// Enumerate returns every secure-element key carrying tag, each with its label
+// and raw public key. It returns an empty slice when no key matches.
+func Enumerate(tag string) ([]KeyAttributes, error) {
+	cfTag, err := newCFData([]byte(tag))
+	if err != nil {
+		return nil, err
+	}
+	defer C.CFRelease(C.CFTypeRef(cfTag))
+
+	query, err := newCFDictionary(map[C.CFTypeRef]C.CFTypeRef{
+		C.CFTypeRef(C.kSecClass):              C.CFTypeRef(C.kSecClassKey),
+		C.CFTypeRef(C.kSecAttrKeyType):        C.CFTypeRef(C.kSecAttrKeyTypeEC),
+		C.CFTypeRef(C.kSecAttrApplicationTag): C.CFTypeRef(cfTag),
+		C.CFTypeRef(C.kSecAttrKeyClass):       C.CFTypeRef(C.kSecAttrKeyClassPrivate),
+		C.CFTypeRef(C.kSecReturnRef):          C.CFTypeRef(C.kCFBooleanTrue),
+		C.CFTypeRef(C.kSecReturnAttributes):   C.CFTypeRef(C.kCFBooleanTrue),
+		C.CFTypeRef(C.kSecMatchLimit):         C.CFTypeRef(C.kSecMatchLimitAll),
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer C.CFRelease(C.CFTypeRef(query))
+
+	var result C.CFTypeRef
+	status := C.SecItemCopyMatching(query, &result)
+	if status == C.errSecItemNotFound {
+		return nil, nil
+	}
+	if err := goError(status); err != nil {
+		return nil, err
+	}
+	defer C.CFRelease(result)
+
+	items := C.CFArrayRef(result)
+	count := int(C.CFArrayGetCount(items))
+	keys := make([]KeyAttributes, 0, count)
+	for i := 0; i < count; i++ {
+		attrs := C.CFDictionaryRef(C.CFArrayGetValueAtIndex(items, C.CFIndex(i)))
+
+		keyRef := C.SecKeyRef(C.CFDictionaryGetValue(attrs, unsafe.Pointer(C.kSecValueRef)))
+		pubKey, err := extractPubKey(keyRef)
+		if err != nil {
+			return nil, err
+		}
+
+		label := goString(C.CFStringRef(C.CFDictionaryGetValue(attrs, unsafe.Pointer(C.kSecAttrLabel))))
+		keys = append(keys, KeyAttributes{Label: label, PublicKey: pubKey})
+	}
+
+	return keys, nil
+}
+
 func fetchSEPrivKey(label, tag string, hash []byte) (C.SecKeyRef, error) {
 	cfTag, err := newCFData([]byte(tag))
 	if err != nil {
@@ -306,6 +367,27 @@ func newCFString(s string) (C.CFStringRef, error) {
 		return ref, fmt.Errorf("error creating CFString")
 	}
 	return ref, nil
+}
+
+func goString(ref C.CFStringRef) string {
+	if ref == nilCFString {
+		return ""
+	}
+
+	// The fast path returns an internal pointer when one is available.
+	if p := C.CFStringGetCStringPtr(ref, C.kCFStringEncodingUTF8); p != nil {
+		return C.GoString(p)
+	}
+
+	length := C.CFStringGetLength(ref)
+	maxSize := C.CFStringGetMaximumSizeForEncoding(length, C.kCFStringEncodingUTF8) + 1
+	buf := (*C.char)(C.malloc(C.size_t(maxSize)))
+	defer C.free(unsafe.Pointer(buf))
+
+	if C.CFStringGetCString(ref, buf, maxSize, C.kCFStringEncodingUTF8) == 0 {
+		return ""
+	}
+	return C.GoString(buf)
 }
 
 func newCFDictionary(m map[C.CFTypeRef]C.CFTypeRef) (C.CFDictionaryRef, error) {
