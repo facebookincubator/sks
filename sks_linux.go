@@ -42,14 +42,15 @@ func getCryptoProcessor() (linux.Cryptoprocessor, error) {
 // genKeyPair creates a key with the given label and tag
 // Returns public key raw data.
 // tag, useBiometrics, and accessibleWhenUnlockedOnly are ignored
-func genKeyPair(label, tag string, _, _ bool) ([]byte, error) {
+// When authValue is non-empty the key is created requiring that value to sign.
+func genKeyPair(label, tag string, _, _ bool, authValue []byte) ([]byte, error) {
 	tpm, err := getCryptoProcessor()
 	if err != nil {
 		return nil, fmt.Errorf(ErrGenKeyPair, label, tag, err)
 	}
 	defer tpm.Close()
 
-	res, err := tpm.GenKeyPair(label)
+	res, err := tpm.GenKeyPair(label, authValue)
 	if err != nil {
 		return nil, fmt.Errorf(ErrGenKeyPair, label, tag, err)
 	}
@@ -83,14 +84,15 @@ func attestKey(label, tag string, attestor attest.Attestor) (*attest.Resp, error
 // signWithKey signs arbitrary data pointed to by data with the key described by
 // label and tag. Returns the signed data.
 // tag and hash are not used.
-func signWithKey(label, tag string, _, data []byte) ([]byte, error) {
+// authValue must match the value the key was created with, if any.
+func signWithKey(label, tag string, _, data, authValue []byte) ([]byte, error) {
 	tpm, err := getCryptoProcessor()
 	if err != nil {
 		return nil, fmt.Errorf(ErrSignWithKey, label, tag, err)
 	}
 	defer tpm.Close()
 
-	res, err := tpm.SignWithKey(label, data)
+	res, err := tpm.SignWithKey(label, data, authValue)
 	if err != nil {
 		return nil, fmt.Errorf(ErrSignWithKey, label, tag, err)
 	}

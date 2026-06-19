@@ -216,7 +216,7 @@ func (tpm *tpmDevice) FlushKey(key CryptoKey, closeKey bool) error {
 // (see templates.go; DefaultECCEKTemplate for the primary key and
 // DefaultECCKeyTemplate for other keys) set template to nil, or pass the
 // template to use.
-func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persistentHandle tpmutil.Handle, template *tpm2.Public) (CryptoKey, error) {
+func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persistentHandle tpmutil.Handle, template *tpm2.Public, authValue []byte) (CryptoKey, error) {
 	db, err := diskio.OpenDB()
 	if err != nil {
 		return nil, err
@@ -276,8 +276,10 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 		parent,
 		// We are not sealing this key to any PCR state
 		tpm2.PCRSelection{},
+		// The parent has no authorization value; the new key takes authValue
+		// (empty for a presence-less key) so signing can require it.
 		"",
-		"",
+		string(authValue),
 		keyTmpl,
 	)
 	if err != nil {
@@ -358,7 +360,7 @@ func (tpm *tpmDevice) GenerateKey(parent tpmutil.Handle, keyID string, persisten
 	return key, nil
 }
 
-func (tpm *tpmDevice) LoadKey(keyID string, parentHandle, persistentHandle tpmutil.Handle, template *tpm2.Public) (CryptoKey, error) {
+func (tpm *tpmDevice) LoadKey(keyID string, parentHandle, persistentHandle tpmutil.Handle, template *tpm2.Public, authValue []byte) (CryptoKey, error) {
 	cpKey, err := tpm.LoadDiskKey(keyID)
 	if err != nil {
 		return nil, err
@@ -368,7 +370,7 @@ func (tpm *tpmDevice) LoadKey(keyID string, parentHandle, persistentHandle tpmut
 		slog.Warn(fmt.Sprintf("Key '%s' not found, attempting to create it", keyID))
 
 		cpKey, err = tpm.GenerateKey(
-			parentHandle, keyID, persistentHandle, template)
+			parentHandle, keyID, persistentHandle, template, authValue)
 		if err != nil {
 			return nil, err
 		}
@@ -410,7 +412,7 @@ func (tpm *tpmDevice) GetOrgRootKey() (CryptoKey, error) {
 	// We explicitly only want to use the Endorsement Hierarchy, it's the only
 	// privacy-sensitive hierarchy and the one explicitly recommended for use
 	// when there are privacy considerations.
-	primaryKey, err := tpm.GenerateKey(tpm2.HandleEndorsement, "", 0, nil)
+	primaryKey, err := tpm.GenerateKey(tpm2.HandleEndorsement, "", 0, nil, nil)
 	if err != nil {
 		slog.Debug(fmt.Sprintf("Error generating new primary key: %+v", err))
 		return nil, err
@@ -425,6 +427,7 @@ func (tpm *tpmDevice) GetOrgRootKey() (CryptoKey, error) {
 		primaryKey.GetHandle(),
 		TPMOrgSRKHandle,
 		&rootKeyTmpl,
+		nil,
 	)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Error loading organization root key: %+v", err))

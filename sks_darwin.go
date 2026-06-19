@@ -25,7 +25,9 @@ import (
 
 // genKeyPair creates a key with the given label and tag potentially
 // needing biometric authentication. Returns public key raw data.
-func genKeyPair(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool) ([]byte, error) {
+// authValue is ignored on macOS, where user presence is enforced by the
+// Secure Enclave rather than an authorization value.
+func genKeyPair(label, tag string, useBiometrics, accessibleWhenUnlockedOnly bool, _ []byte) ([]byte, error) {
 	res, err := macos.GenKeyPair(label, tag, useBiometrics, accessibleWhenUnlockedOnly)
 	if err != nil {
 		return nil, fmt.Errorf(ErrGenKeyPair, label, tag, err)
@@ -37,7 +39,9 @@ func genKeyPair(label, tag string, useBiometrics, accessibleWhenUnlockedOnly boo
 // signWithKey signs arbitrary data pointed to by data with the key described by
 // label and tag. Returns the signed data.
 // hash is the SHA1 of the key. Can be nil
-func signWithKey(label, tag string, hash, data []byte) ([]byte, error) {
+// authValue is ignored on macOS, where user presence is enforced by the
+// Secure Enclave rather than an authorization value.
+func signWithKey(label, tag string, hash, data, _ []byte) ([]byte, error) {
 	res, err := macos.SignWithKey(label, tag, hash, data)
 	if err != nil {
 		return nil, fmt.Errorf(ErrSignWithKey, label, tag, err)

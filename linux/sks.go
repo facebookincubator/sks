@@ -37,7 +37,7 @@ import (
 // of the functions exposed in sks_linux.go are defined here. This is the only
 // exception to having all TPM device functions in tpm.go and exists solely for
 // keeping the public SKS API in one easily-discovered location.
-func (tpm *tpmDevice) GenKeyPair(keyID string) (b []byte, err error) {
+func (tpm *tpmDevice) GenKeyPair(keyID string, authValue []byte) (b []byte, err error) {
 	newKeyHandle, flush, err := tpm.keyHandler.Get(keyID)
 	if err != nil {
 		return nil, fmt.Errorf("cannot reseve handle for key ID %q: %w", keyID, err)
@@ -58,7 +58,7 @@ func (tpm *tpmDevice) GenKeyPair(keyID string) (b []byte, err error) {
 	// Possible shortcut: we may be asked for the org root key here.
 	var newKey CryptoKey
 	if newKeyHandle != orgRootKey.GetHandle() {
-		newKey, err = tpm.LoadKey(keyID, orgRootKey.GetHandle(), newKeyHandle, nil)
+		newKey, err = tpm.LoadKey(keyID, orgRootKey.GetHandle(), newKeyHandle, nil, authValue)
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +94,7 @@ func (tpm *tpmDevice) AttestKey(keyID string, attestor attest.Attestor) (*attest
 	}()
 
 	// Next get the requested key, or bail if it can't be loaded.
-	key, err := tpm.LoadKey(keyID, orgRootKey.GetHandle(), 0, nil)
+	key, err := tpm.LoadKey(keyID, orgRootKey.GetHandle(), 0, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not load requested key %q: %w", keyID, err)
 	}
@@ -120,7 +120,7 @@ func (tpm *tpmDevice) AttestKey(keyID string, attestor attest.Attestor) (*attest
 	return resp, nil
 }
 
-func (tpm *tpmDevice) SignWithKey(keyID string, digest []byte) ([]byte, error) {
+func (tpm *tpmDevice) SignWithKey(keyID string, digest, authValue []byte) ([]byte, error) {
 	// First get the org root key so the requested child key can be loaded and
 	// used.
 	orgRootKey, err := tpm.GetOrgRootKey()
@@ -130,7 +130,7 @@ func (tpm *tpmDevice) SignWithKey(keyID string, digest []byte) ([]byte, error) {
 	defer tpm.FlushKey(orgRootKey, true)
 
 	// Next get the requested key, or bail if it can't be loaded.
-	key, err := tpm.LoadKey(keyID, orgRootKey.GetHandle(), 0, nil)
+	key, err := tpm.LoadKey(keyID, orgRootKey.GetHandle(), 0, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not load requested key %q: %w", keyID, err)
 	}
@@ -139,7 +139,7 @@ func (tpm *tpmDevice) SignWithKey(keyID string, digest []byte) ([]byte, error) {
 	signature, err := tpm2.Sign(
 		tpm.rwc,
 		key.GetLoadedHandle(),
-		"",
+		string(authValue),
 		digest,
 		nil,
 		&tpm2.SigScheme{
