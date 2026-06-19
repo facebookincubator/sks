@@ -269,3 +269,9 @@ func getSecureHardwareVendorData() (*attest.SecureHardwareVendorData, error) {
 		Version:                2, // We only support tpm 2.0
 	}, nil
 }
+
+// enumerate is not implemented on Windows: the Platform Crypto Provider does
+// not expose listing keys by tag.
+func enumerate(_ string) ([]EnumeratedKey, error) {
+	return nil, fmt.Errorf(ErrNotImplemented, "Enumerate")
+}

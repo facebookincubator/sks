@@ -18,9 +18,11 @@
 package linux
 
 import (
+	"io"
+	"time"
+
 	"github.com/google/go-tpm/legacy/tpm2"
 	"github.com/google/go-tpm/tpmutil"
-	"io"
 
 	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/utils"
@@ -61,8 +63,25 @@ type Cryptoprocessor interface {
 	// with only the R and S values.
 	SignWithKey(keyID string, digest []byte) ([]byte, error)
 
+	// EnumerateKeys returns the label, raw public key and creation time of every
+	// user key in the on-disk store.
+	EnumerateKeys() ([]KeyInfo, error)
+
 	// AttestKey performs a TPM 2.0 handshake and attests the provided TPM key
 	AttestKey(keyID string, attestor attest.Attestor) (*attest.Resp, error)
+}
+
+// KeyInfo describes a key returned by EnumerateKeys.
+type KeyInfo struct {
+	// Label is the key's label.
+	Label string
+
+	// PublicKey is the raw public key, as X and Y in ASN.1 DER format.
+	PublicKey []byte
+
+	// Created is when the key was created, or the zero time for keys stored
+	// before creation time was recorded.
+	Created time.Time
 }
 
 // CryptoKey defines the interface any representation of a key to be used with
@@ -112,6 +131,10 @@ type CryptoKey interface {
 	// FillKeyData provides a way to fill in key data not directly filled in
 	// when a key is generated.
 	FillKeyData(publicBytes, privateBytes, creationData, keyName []byte) error
+
+	// GetCreated returns the key's creation time as Unix seconds, or 0 for keys
+	// stored before creation time was recorded.
+	GetCreated() int64
 }
 
 // tpmDevice is the opaque struct interfacing with the TPM device on Linux. This will
@@ -157,6 +180,10 @@ type tpmKey struct {
 
 	// CreationHash is the creation data hash
 	CreationHash []byte
+
+	// Created is when the key was generated, as Unix seconds. It is 0 for keys
+	// stored before this field was added.
+	Created int64
 
 	// Handle is the TPM handle for the key
 	Handle tpmutil.Handle

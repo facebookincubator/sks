@@ -55,6 +55,13 @@ P256 keys.
 This function constructs a `Key` identified by label and tag without looking up the key
 in SKS. The public key of the structure implementing the `Key` interface is not populated.
 
+3. `Enumerate(tag string) ([]EnumeratedKey, error)`
+This function returns an `EnumeratedKey` for every key held in the secure hardware that
+carries the given tag. Each embeds a `Key` (with the public key populated) and a `Created`
+time, which is the zero time on platforms that do not record it. On macOS the query is
+constrained to the Secure Enclave, so only hardware-backed keys are returned. It is not
+implemented on Windows.
+
 The `Key` interface implements the `crypto.Signer` interface with some additional functions
 specific to SKS.
 

@@ -24,6 +24,7 @@ import (
 
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/facebookincubator/sks/attest"
 	"github.com/facebookincubator/sks/diskio"
@@ -187,6 +188,54 @@ func (tpm *tpmDevice) FindPubKey(keyID string) ([]byte, error) {
 	}
 
 	return elliptic.Marshal(elliptic.P256(), pubKey.X, pubKey.Y), nil
+}
+
+// EnumerateKeys returns the label, raw public key and creation time of every
+// user key in the on-disk store, skipping the internal organization root key.
+func (tpm *tpmDevice) EnumerateKeys() ([]KeyInfo, error) {
+	db, err := diskio.OpenDB()
+	if err != nil {
+		return nil, err
+	}
+
+	labels, err := db.List()
+	if err != nil {
+		return nil, err
+	}
+
+	infos := make([]KeyInfo, 0, len(labels))
+	for _, label := range labels {
+		if label == diskio.OrgRootKey {
+			continue
+		}
+
+		key, err := tpm.LoadDiskKey(label)
+		if err != nil {
+			return nil, fmt.Errorf("could not load key %q: %w", label, err)
+		}
+		if key == nil || key.IsEmpty() {
+			continue
+		}
+
+		pubKey, err := key.GetECPublicKey()
+		if err != nil {
+			key.Close()
+			return nil, fmt.Errorf("error getting public key for key %q: %w", label, err)
+		}
+
+		info := KeyInfo{
+			Label:     label,
+			PublicKey: elliptic.Marshal(elliptic.P256(), pubKey.X, pubKey.Y),
+		}
+		if c := key.GetCreated(); c > 0 {
+			info.Created = time.Unix(c, 0).UTC()
+		}
+		key.Close()
+
+		infos = append(infos, info)
+	}
+
+	return infos, nil
 }
 
 func (tpm *tpmDevice) DeleteKey(keyID string) error {

@@ -67,6 +67,10 @@ func (key *tpmKey) GetHandle() tpmutil.Handle {
 	return key.Handle
 }
 
+func (key *tpmKey) GetCreated() int64 {
+	return key.Created
+}
+
 func (key *tpmKey) GetLoadedHandle() tpmutil.Handle {
 	return key.loadedHandle
 }

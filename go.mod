@@ -6,6 +6,7 @@ require (
 	github.com/google/certtostore v1.0.3-0.20230404221207-8d01647071cc
 	github.com/google/go-attestation v0.5.1
 	github.com/google/go-tpm v0.9.0
+	github.com/google/go-tpm-tools v0.4.2
 	github.com/jgoguen/go-utils v0.0.0-20200211015258-b42ad41486fd
 	github.com/peterbourgon/diskv v2.0.1+incompatible
 	golang.org/x/sys v0.38.0
